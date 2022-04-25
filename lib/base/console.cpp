@@ -16,25 +16,36 @@ int bidirpipe(int pfd[], const char *cmd , const char * const argv[], const char
 	int pfderr[2]; /* stderr from child to parent */
 	int pid;       /* child's pid */
 
-	if ( pipe(pfdin) == -1 || pipe(pfdout) == -1 || pipe(pfderr) == -1)
+	if ( pipe(pfdin) == -1 || pipe(pfdout) == -1 || pipe(pfderr) == -1) {
+		eDebug("[eConsoleAppContainer] failed to create pipe for %s", cwd);
 		return(-1);
+	}
 
-	if ( ( pid = vfork() ) == -1 )
+	if ( ( pid = vfork() ) == -1 ) {
+		eDebug("[eConsoleAppContainer] vfork failed for %s", cwd);
 		return(-1);
+	}
 	else if (pid == 0) /* child process */
 	{
 		setsid();
-		if ( close(0) == -1 || close(1) == -1 || close(2) == -1 )
+		if ( close(0) == -1 || close(1) == -1 || close(2) == -1 ) {
+			eDebug("[eConsoleAppContainer] failed to close 1,2,3 for %s", cwd);
 			_exit(0);
+		}
 
-		if (dup(pfdout[0]) != 0 || dup(pfdin[1]) != 1 || dup(pfderr[1]) != 2 )
+		if (dup(pfdout[0]) != 0 || dup(pfdin[1]) != 1 || dup(pfderr[1]) != 2 ) {
+			eDebug("[eConsoleAppContainer] failed to dup parent pipes for %s", cwd);
 			_exit(0);
+		}
 
 		if (close(pfdout[0]) == -1 || close(pfdout[1]) == -1 ||
 				close(pfdin[0]) == -1 || close(pfdin[1]) == -1 ||
-				close(pfderr[0]) == -1 || close(pfderr[1]) == -1 )
+				close(pfderr[0]) == -1 || close(pfderr[1]) == -1 ) {
+			eDebug("[eConsoleAppContainer] failed to close parent pipes for %s", cwd);
 			_exit(0);
+		}
 
+		// I am worried about how or why these limits were chosen!
 		for (unsigned int i=3; i < 90; ++i )
 			close(i);
 
@@ -42,12 +53,15 @@ int bidirpipe(int pfd[], const char *cmd , const char * const argv[], const char
 			eDebug("[eConsoleAppContainer] failed to change directory to %s (%m)", cwd);
 
 		execvp(cmd, (char * const *)argv);
-				/* the vfork will actually suspend the parent thread until execvp is called. thus it's ok to use the shared arg/cmdline pointers here. */
+		// What is execvp has an issue?
+		/* the vfork will actually suspend the parent thread until execvp is called. thus it's ok to use the shared arg/cmdline pointers here. */
 		eDebug("[eConsoleAppContainer] Finished %s", cmd);
 		_exit(0);
 	}
-	if (close(pfdout[0]) == -1 || close(pfdin[1]) == -1 || close(pfderr[1]) == -1)
-			return(-1);
+	if (close(pfdout[0]) == -1 || close(pfdin[1]) == -1 || close(pfderr[1]) == -1) {
+		eDebug("[eConsoleAppContainer] failed to close pipe for %s", cwd);
+		return(-1);
+	}
 
 	pfd[0] = pfdin[0];
 	pfd[1] = pfdout[1];
@@ -74,11 +88,15 @@ int eConsoleAppContainer::setCWD( const char *path )
 {
 	struct stat dir_stat;
 
-	if (stat(path, &dir_stat) == -1)
+	if (stat(path, &dir_stat) == -1) {
+		eDebug("[eConsoleAppContainer] setCWD / stat failed for %s", path);
 		return -1;
+	}
 
-	if (!S_ISDIR(dir_stat.st_mode))
+	if (!S_ISDIR(dir_stat.st_mode)) {
+		eDebug("[eConsoleAppContainer] setCWD / failed because %s is not a directory", path);
 		return -2;
+	}
 
 	m_cwd = path;
 	return 0;
@@ -119,7 +137,7 @@ int eConsoleAppContainer::execute(const char *cmdline, const char * const argv[]
 		return -3;
 	}
 
-//	eDebug("[eConsoleAppContainer] pipe in = %d, out = %d, err = %d", fd[0], fd[1], fd[2]);
+	eDebug("[eConsoleAppContainer] bidirpipe pid = %d, in = %d, out = %d, err = %d", pid, fd[0], fd[1], fd[2]);
 
 	::fcntl(fd[0], F_SETFL, O_NONBLOCK);
 	::fcntl(fd[1], F_SETFL, O_NONBLOCK);
@@ -182,6 +200,7 @@ void eConsoleAppContainer::sendCtrlC()
 		 * ('pid' might not even be running anymore at this point)
 		 */
 		::kill(-pid, SIGINT);
+		// What happened with the kill?  Did it work?  Did it fail?
 	}
 }
 
@@ -189,6 +208,7 @@ void eConsoleAppContainer::sendEOF()
 {
 	if (out)
 		out->stop();
+		// Did the stop work?
 	if (fd[1] != -1)
 	{
 		::close(fd[1]);
@@ -200,23 +220,29 @@ void eConsoleAppContainer::closePipes()
 {
 	if (in)
 		in->stop();
+		// Did the stop work?
 	if (out)
 		out->stop();
+		// Did the stop work?
 	if (err)
 		err->stop();
+		// Did the stop work?
 	if (fd[0] != -1)
 	{
 		::close(fd[0]);
+		// Did the close work?
 		fd[0]=-1;
 	}
 	if (fd[1] != -1)
 	{
 		::close(fd[1]);
+		// Did the close work?
 		fd[1]=-1;
 	}
 	if (fd[2] != -1)
 	{
 		::close(fd[2]);
+		// Did the close work?
 		fd[2]=-1;
 	}
 	while( outbuf.size() ) // cleanup out buffer
@@ -234,7 +260,7 @@ void eConsoleAppContainer::readyRead(int what)
 	bool hungup = what & eSocketNotifier::Hungup;
 	if (what & (eSocketNotifier::Priority|eSocketNotifier::Read))
 	{
-//		eDebug("[eConsoleAppContainer] readyRead what = %d", what);
+		eDebug("[eConsoleAppContainer] readyRead what = %d", what);
 		char* buf = &buffer[0];
 		int rd;
 		while((rd = read(fd[0], buf, buffer.size()-1)) > 0)
@@ -297,6 +323,7 @@ void eConsoleAppContainer::write( const char *data, int len )
 	outbuf.push(queue_data(tmp,len));
 	if (out)
 		out->start();
+		// Did the start work?
 }
 
 void eConsoleAppContainer::readyWrite(int what)
@@ -325,18 +352,23 @@ void eConsoleAppContainer::readyWrite(int what)
 			int rsize = read(filefd[0], buf, buffer.size());
 			if ( rsize > 0 )
 				write(buf, rsize);
+				// Did the write work?
 			else
 			{
 				close(filefd[0]);
+				// Did the close work?
 				filefd[0] = -1;
 				::close(fd[1]);
+				// Did the close work?
 				eDebug("[eConsoleAppContainer] readFromFile done - closing stdin pipe");
 				fd[1]=-1;
 				dataSent(0);
 				out->stop();
+				// Did the stop work?
 			}
 		}
 		else
 			out->stop();
+			// Did the stop work?
 	}
 }
