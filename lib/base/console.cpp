@@ -218,6 +218,7 @@ void eConsoleAppContainer::sendEOF()
 
 void eConsoleAppContainer::closePipes()
 {
+	eDebug("[eConsoleAppContainer] closePipes start");
 	if (in)
 		in->stop();
 		// Did the stop work?
@@ -253,14 +254,15 @@ void eConsoleAppContainer::closePipes()
 	}
 	in = 0; out = 0; err = 0;
 	pid = -1;
+	eDebug("[eConsoleAppContainer] closePipes done");
 }
 
 void eConsoleAppContainer::readyRead(int what)
 {
 	bool hungup = what & eSocketNotifier::Hungup;
+	eDebug("[eConsoleAppContainer] readyRead what = %d", what);
 	if (what & (eSocketNotifier::Priority|eSocketNotifier::Read))
 	{
-		eDebug("[eConsoleAppContainer] readyRead what = %d", what);
 		char* buf = &buffer[0];
 		int rd;
 		while((rd = read(fd[0], buf, buffer.size()-1)) > 0)
@@ -277,9 +279,11 @@ void eConsoleAppContainer::readyRead(int what)
 				break;
 		}
 	}
+	eDebug("[eConsoleAppContainer] readyRead readyErrRead");
 	readyErrRead(eSocketNotifier::Priority|eSocketNotifier::Read); /* be sure to flush all data which might be already written */
 	if (hungup)
 	{
+		eDebug("[eConsoleAppContainer] readyRead hungup");
 		int childstatus;
 		int retval = killstate;
 		/*
@@ -294,8 +298,10 @@ void eConsoleAppContainer::readyRead(int what)
 			}
 		}
 		closePipes();
+		eDebug("[eConsoleAppContainer] appClosed retval = %d", retval);
 		/*emit*/ appClosed(retval);
 	}
+	eDebug("[eConsoleAppContainer] readyRead end");
 }
 
 void eConsoleAppContainer::readyErrRead(int what)
