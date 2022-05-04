@@ -206,9 +206,14 @@ int ePython::call(ePyObject pFunc, ePyObject pArgs)
 {
 	int res = -1;
 	ePyObject pValue;
+	eLog(lvlDebug, "[ePyObject] ePython::call");
 	if (pFunc && PyCallable_Check(pFunc))
 	{
+		ePyObject FuncStr = PyObject_Str(pFunc);
+		ePyObject ArgStr = PyObject_Str(pArgs);
+		eLog(lvlDebug, "[ePyObject] (PyObject_CallObject(%s,%s)) start", PyString_AS_STRING(FuncStr), PyString_AS_STRING(ArgStr));
 		pValue = PyObject_CallObject(pFunc, pArgs);
+		eLog(lvlDebug, "[ePyObject] (PyObject_CallObject(%s,%s)) done", PyString_AS_STRING(FuncStr), PyString_AS_STRING(ArgStr));
  		if (pValue)
 		{
 			if (PyInt_Check(pValue))
