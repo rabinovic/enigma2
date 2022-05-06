@@ -202,7 +202,7 @@ class wpaSupplicant:
 		contents += "key=" + psk + "\n"
 		print("content = \n" + contents)
 
-		fd = open(getWlConfName(iface), "w")
+		fd = open(getWlanConfigName(iface), "w")
 		fd.write(contents)
 		fd.close()
 
@@ -214,7 +214,7 @@ class wpaSupplicant:
 		wsconf["wepkeytype"] = "ASCII" # not used
 		wsconf["key"] = ""
 
-		configfile = getWlConfName(iface)
+		configfile = getWlanConfigName(iface)
 
 		try:
 			fd = open(configfile, "r")
@@ -441,7 +441,7 @@ class Status:
 		if ssid != None and ssid != "off":
 			scanresults = list(Cell.all(iface))
 			aps = {}
-			if scanresults is not None:
+			if scanresults:
 				for i in range(len(scanresults)):
 					bssid = scanresults[i].ssid
 					aps[bssid] = {

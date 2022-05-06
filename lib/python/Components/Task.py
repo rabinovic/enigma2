@@ -17,7 +17,7 @@ class Job(object):
 		self.current_task = 0
 		self.callback = None
 		self.name = name
-		self.finished = False
+		self.finished = False  # FIXME Do we need this?
 		self.end = 100
 		self.__progress = 0
 		self.weightScale = 1
@@ -292,7 +292,7 @@ class PythonTask(Task):
 		self.timer.start(5)
 
 	def work(self):
-		raise NotImplemented("work")
+		raise NotImplementedError("work")
 
 	def abort(self):
 		self.aborted = True

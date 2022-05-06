@@ -8,7 +8,6 @@ from Tools.BoundFunction import boundFunction
 from ServiceReference import ServiceReference
 import Tools.Notifications
 from Tools.Directories import resolveFilename, SCOPE_CONFIG
-from Tools.Notifications import AddPopup
 from enigma import eTimer, eServiceCenter, iServiceInformation, eServiceReference, eDVBDB
 import time
 
@@ -40,8 +39,9 @@ def InitParentalControl():
 	config.ParentalControl.config_sections.standby_menu = ConfigYesNo(default=False)
 	config.ParentalControl.config_sections.movie_list = ConfigYesNo(default=False)
 	config.ParentalControl.config_sections.context_menus = ConfigYesNo(default=False)
-	config.ParentalControl.config_sections.infopanel = ConfigYesNo(default=False)
+	#config.ParentalControl.config_sections.infopanel = ConfigYesNo(default=False)
 	config.ParentalControl.config_sections.quickmenu = ConfigYesNo(default=False)
+	config.ParentalControl.config_sections.software_update = ConfigYesNo(default=False)
 
 	#Added for backwards compatibility with some 3rd party plugins that depend on this config
 	config.ParentalControl.servicepinactive = config.ParentalControl.configured
@@ -186,7 +186,7 @@ class ParentalControl:
 				if self.session:
 					self.session.open(MessageBox, messageText, MessageBox.TYPE_INFO, timeout=3)
 				else:
-					AddPopup(messageText, MessageBox.TYPE_ERROR, timeout=3)
+					Tools.Notifications.AddPopup(messageText, MessageBox.TYPE_ERROR, timeout=3)
 
 	def saveListToFile(self, sWhichList, vList):
 		#Replaces saveWhiteList and saveBlackList:

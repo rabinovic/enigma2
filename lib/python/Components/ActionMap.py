@@ -35,8 +35,8 @@ def getKeyBindingKeys(filterFunction=lambda key: True):
 
 def removeKeyBinding(keyId, context, mapto, wild=True):
 	if wild and mapto == "*":
-		for context, mapto in keyBindings.keys():
-			if context == context:
+		for ctx, mapto in keyBindings.keys():
+			if ctx == context:
 				removeKeyBinding(keyId, context, mapto, False)
 		return
 	contextAction = (context, mapto)
@@ -89,7 +89,7 @@ def parseKeymap(filename, context, actionMapInstance, device, domKeys):
 				error = True
 		mapto = key.attrib.get("mapto")
 		unmap = key.attrib.get("unmap")
-		if mapto is None and unamp is None:
+		if mapto is None and unmap is None:
 			print("[ActionMap] Error: At least one of the attributes 'mapto' or 'unmap' in context '%s' id '%s' (%d) in file '%s' must be specified!" % (context, keyName, keyId, filename))
 			error = True
 		flags = key.attrib.get("flags")
@@ -106,7 +106,7 @@ def parseKeymap(filename, context, actionMapInstance, device, domKeys):
 			newFlags = sum(map(flagToValue, flags))
 			if not newFlags:
 				print("[ActionMap] Error: Attribute 'flag' value '%s' in context '%s' id '%s' (%d) in file '%s' appears invalid!" % (flags, context, keyName, keyId, filename))
-				errors += 1
+				error = True
 			flags = newFlags
 		if not error:
 			if unmap is None:  # If a key was unmapped, it can only be assigned a new function in the same keymap file (avoid file parsing sequence dependency).
@@ -288,8 +288,10 @@ class HelpableActionMap(ActionMap):
 				if not isinstance(response, (list, tuple)):
 					response = (response, None)
 				if queryKeyBinding(context, action):
-					if not exists((action, response[1])):
-						actionList.append((action, response[1]))
+					# Remove duplicates disabled maybe no longer needed
+					# if not exists((action, response[1])):
+					# 	actionList.append((action, response[1]))
+					actionList.append((action, response[1]))
 				actionDict[action] = response[0]
 			parent.helpList.append((self, context, actionList))
 		ActionMap.__init__(self, contexts, actionDict, prio)

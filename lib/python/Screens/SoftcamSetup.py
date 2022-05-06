@@ -6,6 +6,7 @@ from Components.ActionMap import HelpableActionMap
 from Components.config import ConfigSelection, config
 from Components.ScrollLabel import ScrollLabel
 from Components.Sources.StaticText import StaticText
+from Components.SystemInfo import Refresh_SysSoftCam
 from Screens.Setup import Setup
 from Tools.camcontrol import CamControl
 from Tools.Directories import isPluginInstalled
@@ -28,8 +29,8 @@ class SoftcamSetup(Setup):
 			defaultrestart = "s"
 		else:
 			softcams = [("", _("None"))]
+			defaultsoftcam = ""
 		config.misc.softcams = ConfigSelection(default=defaultsoftcam, choices=softcams)
-		config.misc.softcams.value == ""
 		cardservers = self.cardserver.getList()
 		defaultcardserver = self.cardserver.current()
 		if len(cardservers) > 1:
@@ -37,8 +38,8 @@ class SoftcamSetup(Setup):
 			defaultrestart += "c"
 		else:
 			cardservers = [("", _("None"))]
+			defaultcardserver = ""
 		config.misc.cardservers = ConfigSelection(default=defaultcardserver, choices=cardservers)
-		config.misc.cardservers.value == ""
 		config.misc.restarts = ConfigSelection(default=defaultrestart, choices=restartOptions)
 		Setup.__init__(self, session=session, setup="Softcam")
 		self["key_yellow"] = StaticText()
@@ -75,7 +76,9 @@ class SoftcamSetup(Setup):
 		if device:
 			self.restart(device="e%s" % device)
 		else:
-			Setup.keySave(self)
+			self.saveAll()
+			Refresh_SysSoftCam()
+			self.close()
 
 	def keyCancel(self):
 		Setup.keyCancel(self)
@@ -96,10 +99,10 @@ class SoftcamSetup(Setup):
 
 	def softcamInfo(self):
 		ppanelFilename = "/etc/ppanels/%s.xml" % config.misc.softcams.value
-		if "oscam" in config.misc.softcams.value.lower() and isfile('/usr/lib/enigma2/python/Screens/OScamInfo.py'):
+		if "oscam" in config.misc.softcams.value.lower(): # and isfile('/usr/lib/enigma2/python/Screens/OScamInfo.py'):
 			from Screens.OScamInfo import OscamInfoMenu
 			self.session.open(OscamInfoMenu)
-		elif "cccam" in config.misc.softcams.lower() and isfile('/usr/lib/enigma2/python/Screens/CCcamInfo.py'):
+		elif "cccam" in config.misc.softcams.value.lower(): # and isfile('/usr/lib/enigma2/python/Screens/CCcamInfo.py'):
 			from Screens.CCcamInfo import CCcamInfoMain
 			self.session.open(CCcamInfoMain)
 		elif isfile(ppanelFilename) and isPluginInstalled("PPanel"):
@@ -144,7 +147,9 @@ class SoftcamSetup(Setup):
 			self.mbox.close()
 		self.session.nav.playService(self.oldref, adjust=False)
 		if "e" in self.device:
-			Setup.keySave(self)
+			self.saveAll()
+			Refresh_SysSoftCam()
+			self.close()
 
 	def setEcmInfo(self):
 		(newEcmFound, ecmInfo) = self.ecminfo.getEcm()

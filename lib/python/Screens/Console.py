@@ -24,7 +24,7 @@ class Console(Screen):
 		self.errorOcurred = False
 
 		self["key_red"] = Label(_("Cancel"))
-		self["key_green"] = Label(_("hide"))
+		self["key_green"] = Label(_("Hide"))
 
 		self["text"] = ScrollLabel("")
 		self["summary_description"] = StaticText("")
@@ -159,7 +159,7 @@ class Console(Screen):
 					script = ''
 					for cmd in cmdlist[0].split():
 						if '.' in cmd:
-							if cmd[-3:] in ('.py', '.sh'):
+							if cmd[-3:] in ('.py', '.sh') or cmd[-4:] == '.pyc':
 								script = cmd
 							break
 					if script and path.isfile(script):

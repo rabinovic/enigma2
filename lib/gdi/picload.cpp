@@ -107,7 +107,7 @@ static unsigned char *color_resize(unsigned char * orgin, int ox, int oy, int dx
 	unsigned char* cr = new unsigned char[dx * dy * 3];
 	if (cr == NULL)
 	{
-		eDebug("[ePicLoad] Error malloc");
+		eDebug("[ePicLoad] resize Error malloc");
 		return orgin;
 	}
 	const int stride = 3 * dx;
@@ -139,6 +139,8 @@ static unsigned char *color_resize(unsigned char * orgin, int ox, int oy, int dx
 					b += q[2];
 				}
 			}
+			if (sq == 0) // prevent Division by zero
+				sq = 1;
 			p[0] = r / sq;
 			p[1] = g / sq;
 			p[2] = b / sq;
@@ -170,7 +172,10 @@ static void fetch_pallete(int fd, struct color pallete[], int count)
 	lseek(fd, BMP_COLOR_OFFSET, SEEK_SET);
 	for (int i = 0; i < count; i++)
 	{
-		read(fd, buff, 4);
+		if (read(fd, buff, 4) != 4) // failed to read rgb
+		{
+			break;
+		}
 		pallete[i].red = buff[2];
 		pallete[i].green = buff[1];
 		pallete[i].blue = buff[0];
@@ -188,21 +193,39 @@ static unsigned char *bmp_load(const char *file,  int *x, int *y)
 		close(fd);
 		return NULL;
 	}
-	read(fd, buff, 4);
+	if (read(fd, buff, 4) != 4) // failed to read x
+	{
+		close(fd);
+		return NULL;
+	}
 	*x = buff[0] + (buff[1] << 8) + (buff[2] << 16) + (buff[3] << 24);
-	read(fd, buff, 4);
+	if (read(fd, buff, 4) != 4) // failed to read y
+	{
+		close(fd);
+		return NULL;
+	}
 	*y = buff[0] + (buff[1] << 8) + (buff[2] << 16) + (buff[3] << 24);
-	if (lseek(fd, BMP_TORASTER_OFFSET, SEEK_SET) == -1) {
+	if (lseek(fd, BMP_TORASTER_OFFSET, SEEK_SET) == -1)
+	{
 		close(fd);
 		return NULL;
 	}
-	read(fd, buff, 4);
+	if (read(fd, buff, 4) != 4) // failed to read raster
+	{
+		close(fd);
+		return NULL;
+	}
 	int raster = buff[0] + (buff[1] << 8) + (buff[2] << 16) + (buff[3] << 24);
-	if (lseek(fd, BMP_BPP_OFFSET, SEEK_SET) == -1) {
+	if (lseek(fd, BMP_BPP_OFFSET, SEEK_SET) == -1)
+	{
 		close(fd);
 		return NULL;
 	}
-	read(fd, buff, 2);
+	if (read(fd, buff, 2) != 2) // failed to read bpp
+	{
+		close(fd);
+		return NULL;
+	}
 	int bpp = buff[0] + (buff[1] << 8);
 
 	unsigned char *pic_buffer = new unsigned char[(*x) * (*y) * 3];
@@ -295,6 +318,7 @@ static unsigned char *bmp_load(const char *file,  int *x, int *y)
 			break;
 		}
 		default:
+			delete [] pic_buffer;
 			close(fd);
 			return NULL;
 	}
@@ -304,8 +328,17 @@ static unsigned char *bmp_load(const char *file,  int *x, int *y)
 
 }
 
-//---------------------------------------------------------------------
-
+/**
+ * @brief Load a png
+ *
+ * If you make change to png_load, check the functionality with PngSuite  
+ * http://www.schaik.com/pngsuite/  
+ * These are test images in all standard PNG.
+ *
+ * @param filepara
+ * @param background
+ * @return void
+ */
 static void png_load(Cfilepara* filepara, unsigned int background)
 {
 	png_uint_32 width, height;
@@ -574,14 +607,14 @@ static int jpeg_save(const char * filename, int ox, int oy, unsigned char *pic_b
 
 	if (!outfile)
 	{
-		eDebug("[ePicLoad] jpeg can't write %s", filename);
+		eDebug("[ePicLoad] jpeg can't write %s: %m", filename);
 		return 1;
 	}
 
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&cinfo);
 
-	eDebug("[ePicLoad] save Thumbnail... %s",filename);
+	// eDebug("[ePicLoad] save Thumbnail... %s",filename);
 
 	jpeg_stdio_dest(&cinfo, outfile);
 
@@ -672,6 +705,7 @@ static void svg_load(Cfilepara* filepara, bool forceRGB = false)
 		unsigned char *pic_buffer2 = (unsigned char*)malloc(w*h*3); // 24bit RGB
 		if (pic_buffer2 == nullptr)
 		{
+			free(pic_buffer);
 			return;
 		}
 		for (int i=0; i<w*h; i++)
@@ -1408,15 +1442,21 @@ RESULT ePicLoad::setPara(PyObject *val)
 		ePyObject fast		= PySequence_Fast(val, "");
 		int width		= PyInt_AsLong(PySequence_Fast_GET_ITEM(fast, 0));
 		int height		= PyInt_AsLong(PySequence_Fast_GET_ITEM(fast, 1));
-		double aspectRatio 	= PyInt_AsLong(PySequence_Fast_GET_ITEM(fast, 2));
+
+		ePyObject pas = PySequence_Fast_GET_ITEM(fast, 2);
+
+		#if PY_VERSION_HEX >= 0x030a0000
+			double aspectRatio 	= PyFloat_Check(pas) ? PyFloat_AsDouble(pas) : PyLong_AsDouble(pas); 
+		#else
+			double aspectRatio 	= PyInt_AsLong(pas);
+		#endif
+		
 		int as			= PyInt_AsLong(PySequence_Fast_GET_ITEM(fast, 3));
 		bool useCache		= PyInt_AsLong(PySequence_Fast_GET_ITEM(fast, 4));
 		int resizeType	        = PyInt_AsLong(PySequence_Fast_GET_ITEM(fast, 5));
 		const char *bg_str	= PyString_AsString(PySequence_Fast_GET_ITEM(fast, 6));
-
 		return setPara(width, height, aspectRatio, as, useCache, resizeType, bg_str);
 	}
-	return 1;
 }
 
 RESULT ePicLoad::setPara(int width, int height, double aspectRatio, int as, bool useCache, int resizeType, const char *bg_str)

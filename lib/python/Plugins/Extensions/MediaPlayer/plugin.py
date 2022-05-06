@@ -25,11 +25,10 @@ from Components.ServicePosition import ServicePositionGauge
 from Components.ServiceEventTracker import ServiceEventTracker, InfoBarBase
 from Components.Playlist import PlaylistIOInternal, PlaylistIOM3U, PlaylistIOPLS
 from Components.AVSwitch import AVSwitch
-from Components.Harddisk import harddiskmanager
 from Components.config import config
 from Tools.Directories import fileExists, resolveFilename, SCOPE_CONFIG, SCOPE_PLAYLIST, SCOPE_GUISKIN
 from Tools.BoundFunction import boundFunction
-from .settings import MediaPlayerSettings, Load_defaults
+from .settings import MediaPlayerSetup, Load_defaults
 
 
 class MyPlayList(PlayList):
@@ -136,6 +135,11 @@ class MediaPlayer(Screen, InfoBarBase, InfoBarScreenSaver, InfoBarSeek, InfoBarA
 		except:
 			Load_defaults()
 			defaultDir = config.mediaplayer.defaultDir.value
+		if defaultDir == "None":
+			config.mediaplayer.defaultDir.value = ""
+			defaultDir = ""
+		if defaultDir == "":
+			defaultDir = None
 		self.filelist = FileList(defaultDir, matchingPattern="(?i)^.*\.(mp2|mp3|ogg|ts|trp|mts|m2ts|wav|wave|m3u|pls|e2pls|mpg|vob|avi|divx|m4v|mkv|mp4|m4a|dat|flac|flv|mov|dts|3gp|3g2|asf|wmv|wma|webm)", useServiceRef=True, additionalExtensions="4098:m3u 4098:e2pls 4098:pls")
 		self["filelist"] = self.filelist
 
@@ -686,7 +690,7 @@ class MediaPlayer(Screen, InfoBarBase, InfoBarScreenSaver, InfoBarSeek, InfoBarA
 		elif choice[1] == "deletefile":
 			self.deleteFile()
 		elif choice[1] == "settings":
-			self.session.openWithCallback(self.applySettings, MediaPlayerSettings, self)
+			self.session.openWithCallback(self.applySettings, MediaPlayerSetup, self)
 		elif choice[1] == "audiocd":
 			self.playAudioCD()
 
@@ -1130,7 +1134,7 @@ class MediaPlayer(Screen, InfoBarBase, InfoBarScreenSaver, InfoBarSeek, InfoBarA
 class MediaPlayerLCDScreen(Screen):
 	def __init__(self, session, parent):
 		Screen.__init__(self, session)
-		self["text1"] = Label("Media player")
+		self["text1"] = Label("Media Player")
 		self["text3"] = Label("")
 		self["text4"] = Label("")
 
@@ -1160,7 +1164,7 @@ def main(session, **kwargs):
 def menu(menuid, **kwargs):
 	try:
 		if menuid == "mainmenu" and config.mediaplayer.onMainMenu.value:
-			return [(_("Media player"), main, "media_player", 45)]
+			return [(_("Media Player"), main, "media_player", 45)]
 	except:
 		pass
 	return []
@@ -1299,8 +1303,8 @@ from Plugins.Plugin import PluginDescriptor
 
 def Plugins(**kwargs):
 	return [
-		PluginDescriptor(name=_("Media player"), description=_("Play back media files"), where=PluginDescriptor.WHERE_PLUGINMENU, icon="MediaPlayer.png", needsRestart=False, fnc=main),
-		#PluginDescriptor(name = _("Media player"), where = PluginDescriptor.WHERE_FILESCAN, needsRestart = False, fnc = filescan),
-		PluginDescriptor(name=_("Media player"), where=PluginDescriptor.WHERE_MENU, needsRestart=False, fnc=audiocdscan),
-		PluginDescriptor(name=_("Media player"), description=_("Play back media files"), where=PluginDescriptor.WHERE_MENU, needsRestart=False, fnc=menu)
+		PluginDescriptor(name=_("Media Player"), description=_("Play back media files"), where=PluginDescriptor.WHERE_PLUGINMENU, icon="MediaPlayer.png", needsRestart=False, fnc=main),
+		#PluginDescriptor(name = _("Media Player"), where = PluginDescriptor.WHERE_FILESCAN, needsRestart = False, fnc = filescan),
+		PluginDescriptor(name=_("Media Player"), where=PluginDescriptor.WHERE_MENU, needsRestart=False, fnc=audiocdscan),
+		PluginDescriptor(name=_("Media Player"), description=_("Play back media files"), where=PluginDescriptor.WHERE_MENU, needsRestart=False, fnc=menu)
 	]

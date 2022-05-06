@@ -1,14 +1,14 @@
 from errno import ENOENT, EXDEV
-from inspect import stack
 from os import F_OK, R_OK, W_OK, access, chmod, link, listdir, makedirs, mkdir, readlink, remove, rename, rmdir, sep, stat, statvfs, symlink, utime, walk
 from os.path import basename, dirname, exists, getsize, isdir, isfile, islink, join as pathjoin, normpath, splitext
 from re import compile
 from six import PY2
 from shutil import copy2
 from stat import S_IMODE
+from sys import _getframe as getframe
 from tempfile import mkstemp
 from traceback import print_exc
-from xml.etree.cElementTree import ParseError, fromstring, parse
+from xml.etree.cElementTree import Element, ParseError, fromstring, parse
 
 from enigma import eEnv, getDesktop, eGetEnigmaDebugLvl
 
@@ -37,9 +37,7 @@ SCOPE_MEDIA = 16
 SCOPE_HDD = 17
 SCOPE_TIMESHIFT = 18
 SCOPE_DEFAULTDIR = 19
-SCOPE_DEFAULTPARTITION = 20
-SCOPE_DEFAULTPARTITIONMOUNTDIR = 21
-SCOPE_LIBDIR = 22
+SCOPE_LIBDIR = 20
 
 # Deprecated scopes:
 SCOPE_ACTIVE_LCDSKIN = SCOPE_LCDSKIN
@@ -58,7 +56,7 @@ defaultPaths = {
 	SCOPE_HOME: ("", PATH_DONTCREATE),  # User home directory
 	SCOPE_LANGUAGE: (eEnv.resolve("${datadir}/enigma2/po/"), PATH_DONTCREATE),
 	SCOPE_KEYMAPS: (eEnv.resolve("${datadir}/keymaps/"), PATH_CREATE),
-	SCOPE_METADIR: (eEnv.resolve("${datadir}/meta"), PATH_CREATE),
+	SCOPE_METADIR: (eEnv.resolve("${datadir}/meta/"), PATH_CREATE),
 	SCOPE_SKINS: (eEnv.resolve("${datadir}/enigma2/"), PATH_DONTCREATE),
 	SCOPE_GUISKIN: (eEnv.resolve("${datadir}/enigma2/"), PATH_DONTCREATE),
 	SCOPE_LCDSKIN: (eEnv.resolve("${datadir}/enigma2/display/"), PATH_DONTCREATE),
@@ -75,8 +73,6 @@ defaultPaths = {
 	SCOPE_HDD: ("/media/hdd/movie/", PATH_DONTCREATE),
 	SCOPE_TIMESHIFT: ("/media/hdd/timeshift/", PATH_DONTCREATE),
 	SCOPE_DEFAULTDIR: (eEnv.resolve("${datadir}/enigma2/defaults/"), PATH_CREATE),
-	SCOPE_DEFAULTPARTITION: ("/dev/mtdblock6", PATH_DONTCREATE),
-	SCOPE_DEFAULTPARTITIONMOUNTDIR: (eEnv.resolve("${datadir}/enigma2/dealer"), PATH_CREATE),
 	SCOPE_LIBDIR: (eEnv.resolve("${libdir}/"), PATH_DONTCREATE)
 }
 
@@ -137,7 +133,7 @@ def resolveFilename(scope, base="", path_prefix=None):
 			skin = dirname(config.skin.primary_skin.value)
 			path = pathjoin(path, skin)
 		elif scope in (SCOPE_PLUGIN_ABSOLUTE, SCOPE_PLUGIN_RELATIVE):
-			callingCode = normpath(stack()[1][1])
+			callingCode = normpath(getframe(1).f_code.co_filename)
 			plugins = normpath(scopePlugins)
 			path = None
 			if comparePaths(plugins, callingCode):
@@ -202,7 +198,7 @@ def resolveFilename(scope, base="", path_prefix=None):
 		if pathExists(file):
 			path = file
 	elif scope in (SCOPE_PLUGIN_ABSOLUTE, SCOPE_PLUGIN_RELATIVE):
-		callingCode = normpath(stack()[1][1])
+		callingCode = normpath(getframe(1).f_code.co_filename)
 		plugins = normpath(scopePlugins)
 		path = None
 		if comparePaths(plugins, callingCode):
@@ -235,7 +231,7 @@ def fileReadLine(filename, default=None, source=DEFAULT_MODULE_NAME, debug=False
 		line = default
 		msg = "Default"
 	if debug or forceDebug:
-		print("[%s] Line %d: %s '%s' from file '%s'." % (source, stack()[1][0].f_lineno, msg, line, filename))
+		print("[%s] Line %d: %s '%s' from file '%s'." % (source, getframe(1).f_lineno, msg, line, filename))
 	return line
 
 
@@ -250,7 +246,7 @@ def fileWriteLine(filename, line, source=DEFAULT_MODULE_NAME, debug=False):
 		msg = "Failed to write"
 		result = 0
 	if debug or forceDebug:
-		print("[%s] Line %d: %s '%s' to file '%s'." % (source, stack()[1][0].f_lineno, msg, line, filename))
+		print("[%s] Line %d: %s '%s' to file '%s'." % (source, getframe(1).f_lineno, msg, line, filename))
 	return result
 
 
@@ -267,7 +263,7 @@ def fileReadLines(filename, default=None, source=DEFAULT_MODULE_NAME, debug=Fals
 		msg = "Default"
 	if debug or forceDebug:
 		length = len(lines) if lines else 0
-		print("[%s] Line %d: %s %d lines from file '%s'." % (source, stack()[1][0].f_lineno, msg, length, filename))
+		print("[%s] Line %d: %s %d lines from file '%s'." % (source, getframe(1).f_lineno, msg, length, filename))
 	return lines
 
 
@@ -285,7 +281,7 @@ def fileWriteLines(filename, lines, source=DEFAULT_MODULE_NAME, debug=False):
 		msg = "Failed to write"
 		result = 0
 	if debug or forceDebug:
-		print("[%s] Line %d: %s %d lines to file '%s'." % (source, stack()[1][0].f_lineno, msg, len(lines), filename))
+		print("[%s] Line %d: %s %d lines to file '%s'." % (source, getframe(1).f_lineno, msg, len(lines), filename))
 	return result
 
 
@@ -315,13 +311,16 @@ def fileReadXML(filename, default=None, source=DEFAULT_MODULE_NAME, debug=False)
 		print("[%s] Error: Unexpected error opening/parsing file '%s'!  (%s)" % (source, filename, err))
 		print_exc()
 	if dom is None:
-		if default:
+		if default and isinstance(default, str):
 			dom = fromstring(default)
-			msg = "Default"
+			msg = "Default (XML)"
+		elif default and isinstance(default, Element):
+			dom = default
+			msg = "Default (DOM)"
 		else:
 			msg = "Failed to read"
 	if debug or forceDebug:
-		print("[%s] Line %d: %s from XML file '%s'." % (source, stack()[1][0].f_lineno, msg, filename))
+		print("[%s] Line %d: %s from XML file '%s'." % (source, getframe(1).f_lineno, msg, filename))
 	return dom
 
 
@@ -664,10 +663,11 @@ def mediaFilesInUse(session):
 
 
 def isPluginInstalled(pluginName, pluginFile="plugin", pluginType=None):
-	for type in [x for x in listdir(scopePlugins) if x != "__pychache__" and isdir(pathjoin(scopePlugins, x))]:
-		for extension in ["", "o", "c"]:
+	types = ["Extensions", "SystemPlugins"]
+	if pluginType:
+		types = [pluginType]
+	for type in types:
+		for extension in ["c", ""]:
 			if isfile(pathjoin(scopePlugins, type, pluginName, "%s.py%s" % (pluginFile, extension))):
-				if pluginType and type != pluginType:
-					continue
 				return True
 	return False

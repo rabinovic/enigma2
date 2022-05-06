@@ -6,11 +6,18 @@
 #include "vuplus_gles.h"
 #endif
 
+int eListbox::Defaultwidth = 10;
+int eListbox::Defaultoffset = 5;
+
 eListbox::eListbox(eWidget *parent) :
 	eWidget(parent), m_scrollbar_mode(showNever), m_prev_scrollbar_page(-1),
-	m_content_changed(false), m_enabled_wrap_around(false), m_scrollbar_width(10), m_top(0), m_selected(0), m_itemheight(25),
-	m_items_per_page(0), m_selection_enabled(1), m_scrollbar(NULL), m_native_keys_bound(false)
+	m_content_changed(false), m_enabled_wrap_around(false), m_scrollbar_width(10),
+	m_top(0), m_selected(0), m_itemheight(25),
+	m_items_per_page(0), m_selection_enabled(1), m_scrollbar(nullptr), m_native_keys_bound(false)
 {
+	m_scrollbar_width = eListbox::getDefaultwidth();
+	m_scrollbar_offset = eListbox::getDefaultoffset();
+
 	memset(static_cast<void*>(&m_style), 0, sizeof(m_style));
 	m_style.m_text_offset = ePoint(1,1);
 //	setContent(new eListboxStringContent());
@@ -116,7 +123,7 @@ void eListbox::moveSelection(long dir)
 	if (!m_content)
 		return;
 	/* if our list does not have one entry, don't do anything. */
-	if (!m_items_per_page)
+	if (!m_items_per_page || !m_content->size())
 		return;
 	/* we need the old top/sel to see what we have to redraw */
 	int oldtop = m_top;
@@ -130,7 +137,7 @@ void eListbox::moveSelection(long dir)
 	{
 	case moveEnd:
 		m_content->cursorEnd();
-		// falltrough
+		[[fallthrough]];
 	case moveUp:
 		do
 		{
@@ -158,11 +165,11 @@ void eListbox::moveSelection(long dir)
 		break;
 	case moveTop:
 		m_content->cursorHome();
-		// falltrough
+		[[fallthrough]];
 	case justCheck:
 		if (m_content->cursorValid() && m_content->currentCursorSelectable())
 			break;
-		// falltrough
+		[[fallthrough]];
 	case moveDown:
 		do
 		{
@@ -269,6 +276,10 @@ void eListbox::moveSelection(long dir)
 	m_selected = m_content->cursorGet();
 	m_top = m_selected - (m_selected % m_items_per_page);
 
+	// if it is, then the old selection clip is irrelevant, clear it or we'll get artifacts
+	if (m_top != oldtop && m_content)
+		m_content->resetClip();
+
 	if (oldsel != m_selected)
 		/* emit */ selectionChanged();
 
@@ -313,7 +324,7 @@ void eListbox::updateScrollBar()
 		m_content_changed = false;
 		if (m_scrollbar_mode == showLeft)
 		{
-			m_content->setSize(eSize(width-m_scrollbar_width-5, m_itemheight));
+			m_content->setSize(eSize(width-m_scrollbar_width-m_scrollbar_offset, m_itemheight));
 			m_scrollbar->move(ePoint(0, 0));
 			m_scrollbar->resize(eSize(m_scrollbar_width, height));
 			if (entries > m_items_per_page)
@@ -329,7 +340,7 @@ void eListbox::updateScrollBar()
 		{
 			m_scrollbar->move(ePoint(width-m_scrollbar_width, 0));
 			m_scrollbar->resize(eSize(m_scrollbar_width, height));
-			m_content->setSize(eSize(width-m_scrollbar_width-5, m_itemheight));
+			m_content->setSize(eSize(width-m_scrollbar_width-m_scrollbar_offset, m_itemheight));
 			m_scrollbar->show();
 		}
 		else
@@ -389,7 +400,7 @@ int eListbox::event(int event, void *data, void *data2)
 		int xoffset = 0;
 		if (m_scrollbar && m_scrollbar_mode == showLeft)
 		{
-			xoffset = m_scrollbar->size().width() + 5;
+			xoffset = m_scrollbar->size().width() + m_scrollbar_offset;
 		}
 
 		for (int y = 0, i = 0; i <= m_items_per_page; y += m_itemheight, ++i)
@@ -423,11 +434,11 @@ int eListbox::event(int event, void *data, void *data2)
 				style->setStyle(painter, eWindowStyle::styleListboxNormal);
 				if (m_scrollbar->isVisible())
 				{
-					painter.clip(eRect(m_scrollbar->position() + ePoint(m_scrollbar->size().width(), 0), eSize(5,m_scrollbar->size().height())));
+					painter.clip(eRect(m_scrollbar->position() + ePoint(m_scrollbar->size().width(), 0), eSize(m_scrollbar_offset,m_scrollbar->size().height())));
 				}
 				else
 				{
-					painter.clip(eRect(m_scrollbar->position(), eSize(m_scrollbar->size().width() + 5, m_scrollbar->size().height())));
+					painter.clip(eRect(m_scrollbar->position(), eSize(m_scrollbar->size().width() + m_scrollbar_offset, m_scrollbar->size().height())));
 				}
 				painter.clear();
 				painter.clippop();
@@ -438,7 +449,7 @@ int eListbox::event(int event, void *data, void *data2)
 			if (m_scrollbar && m_scrollbar->isVisible())
 			{
 				style->setStyle(painter, eWindowStyle::styleListboxNormal);
-				painter.clip(eRect(m_scrollbar->position() - ePoint(5,0), eSize(5,m_scrollbar->size().height())));
+				painter.clip(eRect(m_scrollbar->position() - ePoint(m_scrollbar_offset,0), eSize(m_scrollbar_offset,m_scrollbar->size().height())));
 				painter.clear();
 				painter.clippop();
 			}
@@ -659,6 +670,11 @@ void eListbox::setScrollbarWidth(int size)
 	m_scrollbar_width = size;
 }
 
+void eListbox::setScrollbarOffset(int size)
+{
+	m_scrollbar_offset = size;
+}
+
 void eListbox::setBackgroundPicture(ePtr<gPixmap> &pm)
 {
 	m_style.m_background = pm;
@@ -699,12 +715,6 @@ void eListbox::setScrollbarBackgroundPicture(ePtr<gPixmap> &pm)
 {
 	m_scrollbarbackgroundpixmap = pm;
 	if (m_scrollbar && m_scrollbarbackgroundpixmap) m_scrollbar->setBackgroundPixmap(pm);
-}
-
-void eListbox::setScrollbarSliderPicture(ePtr<gPixmap> &pm)
-{
-	m_scrollbarsliderpixmap = pm;
-	if (m_scrollbar && m_scrollbarsliderpixmap) m_scrollbar->setBackgroundPixmap(pm);
 }
 
 void eListbox::invalidate(const gRegion &region)

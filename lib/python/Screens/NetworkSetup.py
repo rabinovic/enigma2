@@ -1,42 +1,46 @@
 from __future__ import print_function
-from boxbranding import getMachineBrand, getMachineName
-from os import system, path as os_path, remove, unlink, rename, chmod, access, X_OK
+from errno import ETIMEDOUT
+import glob
+import os
+from os import X_OK, access, environ, chmod, path as os_path, remove, rename, strerror, system, unlink
 from shutil import move
-import time
 import six
-
-from enigma import eTimer, eConsoleAppContainer
-
-from Screens.Screen import Screen
-from Screens.MessageBox import MessageBox
-from Screens.Standby import TryQuitMainloop
-from Screens.HelpMenu import HelpableScreen
-from Components.About import about, getVersionString
-from Components.Console import Console
-from Components.Network import iNetwork
-from Components.Sources.StaticText import StaticText
-from Components.Sources.Boolean import Boolean
-from Components.Sources.List import List
-from Components.SystemInfo import BoxInfo
-from Components.Label import Label, MultiColorLabel
-from Components.Input import Input
-from Screens.InputBox import InputBox
-from Components.ScrollLabel import ScrollLabel
-from Components.Pixmap import Pixmap, MultiPixmap
-from Components.MenuList import MenuList
-from Components.config import config, ConfigSubsection, ConfigYesNo, ConfigIP, ConfigText, ConfigPassword, ConfigSelection, getConfigListEntry, ConfigNumber, ConfigLocations, NoSave, ConfigMacText
-from Components.ConfigList import ConfigListScreen
-from Components.PluginComponent import plugins
-from Components.FileList import MultiFileSelectList
-from Components.ActionMap import ActionMap, NumberActionMap, HelpableActionMap
-from Tools.Directories import fileExists, resolveFilename, SCOPE_PLUGINS, SCOPE_GUISKIN
-from Tools.LoadPixmap import LoadPixmap
-from Plugins.Plugin import PluginDescriptor
+import time
 from random import Random
 import string
-import os
-import glob
 import sys
+
+from boxbranding import getMachineBrand, getMachineName
+from enigma import eConsoleAppContainer, eTimer
+
+from Components.About import about, getVersionString
+from Components.ActionMap import ActionMap, NumberActionMap, HelpableActionMap
+from Components.config import ConfigIP, ConfigLocations, ConfigMacText, ConfigNumber, ConfigPassword, ConfigSelection, ConfigSubsection, ConfigText, ConfigYesNo, NoSave, config, getConfigListEntry
+from Components.ConfigList import ConfigListScreen
+from Components.Console import Console
+from Components.Input import Input
+from Components.Label import Label, MultiColorLabel
+from Components.MenuList import MenuList
+from Components.Network import iNetwork
+from Components.Pixmap import Pixmap, MultiPixmap
+from Components.ScrollLabel import ScrollLabel
+from Components.SystemInfo import BoxInfo
+from Components.PluginComponent import plugins
+from Components.FileList import MultiFileSelectList
+from Components.Sources.Boolean import Boolean
+from Components.Sources.List import List
+from Components.Sources.StaticText import StaticText
+from Plugins.Plugin import PluginDescriptor
+from Screens.HelpMenu import HelpableScreen
+from Screens.InputBox import InputBox
+from Screens.MessageBox import MessageBox
+from Screens.Screen import Screen
+from Screens.Setup import Setup
+from Screens.Standby import TryQuitMainloop
+from Tools.Directories import SCOPE_GUISKIN, SCOPE_PLUGINS, fileExists, fileReadLines, resolveFilename
+from Tools.LoadPixmap import LoadPixmap
+
+MODULE_NAME = __name__.split(".")[-1]
 
 if float(getVersionString()) >= 4.0:
 	basegroup = "packagegroup-base"
@@ -48,7 +52,7 @@ class NetworkAdapterSelection(Screen, HelpableScreen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
 		HelpableScreen.__init__(self)
-		Screen.setTitle(self, _("Network Setup"))
+		Screen.setTitle(self, _("Network Settings"))
 
 		self.wlan_errortext = _("No working wireless network adapter found.\nPlease verify that you have attached a compatible WLAN device and your network is configured correctly.")
 		self.lan_errortext = _("No working local network adapter found.\nPlease verify that you have attached a network cable and your network is configured correctly.")
@@ -140,9 +144,9 @@ class NetworkAdapterSelection(Screen, HelpableScreen):
 		num_configured_if = len(iNetwork.getConfiguredAdapters())
 		if num_configured_if >= 2:
 			if default == True:
-				defaultpng = LoadPixmap(cached=True, path=resolveFilename(SCOPE_GUISKIN, "buttons/button_blue.png"))
+				defaultpng = LoadPixmap(cached=True, path=resolveFilename(SCOPE_GUISKIN, "buttons/button_green.png"))
 			elif default == False:
-				defaultpng = LoadPixmap(cached=True, path=resolveFilename(SCOPE_GUISKIN, "buttons/button_blue_off.png"))
+				defaultpng = LoadPixmap(cached=True, path=resolveFilename(SCOPE_GUISKIN, "buttons/button_green_off.png"))
 		if active == True:
 			activepng = LoadPixmap(cached=True, path=resolveFilename(SCOPE_GUISKIN, "icons/lock_on.png"))
 		elif active == False:
@@ -186,7 +190,7 @@ class NetworkAdapterSelection(Screen, HelpableScreen):
 			self.list.append(self.buildInterfaceList(x[1], _(x[0]), default_int, active_int))
 
 		if os_path.exists(resolveFilename(SCOPE_PLUGINS, "SystemPlugins/NetworkWizard/networkwizard.xml")):
-			self["key_blue"].setText(_("Network wizard"))
+			self["key_blue"].setText(_("Network Wizard"))
 		self["list"].setList(self.list)
 
 	def setDefaultInterface(self):
@@ -252,109 +256,163 @@ class NetworkAdapterSelection(Screen, HelpableScreen):
 					self.session.openWithCallback(self.AdapterSetupClosed, NetworkWizard, selection[0])
 
 
-class NameserverSetup(Screen, ConfigListScreen, HelpableScreen):
+class DNSSettings(Setup):
 	def __init__(self, session):
-		Screen.__init__(self, session)
-		HelpableScreen.__init__(self)
-		Screen.setTitle(self, _("Nameserver settings"))
-		self.backupNameserverList = iNetwork.getNameserverList()[:]
-		print("backup-list:", self.backupNameserverList)
-
-		self["key_red"] = StaticText(_("Cancel"))
-		self["key_green"] = StaticText(_("Save"))
+		self.dnsInitial = iNetwork.getNameserverList()
+		print("[NetworkSetup] DNSSettings: Initial DNS list: %s." % str(self.dnsInitial))
+		self.dnsOptions = {
+			"custom": [[0, 0, 0, 0]],
+			"dhcp-router": [list(x[1]) for x in self.getNetworkRoutes()],
+			"google": [[8, 8, 8, 8], [8, 8, 4, 4]],
+			"cloudflare": [[1, 1, 1, 1], [1, 0, 0, 1]],
+			"opendns-familyshield": [[208, 67, 222, 123], [208, 67, 220, 123]],
+			"opendns-home": [[208, 67, 222, 222], [208, 67, 220, 220]]
+		}
+		option = self.dnsCheck(self.dnsInitial, refresh=False)
+		self.dnsServers = self.dnsOptions[option][:]
+		self.entryAdded = False
+		Setup.__init__(self, session=session, setup="DNS")
 		self["key_yellow"] = StaticText(_("Add"))
-		self["key_blue"] = StaticText(_("Delete"))
+		self["key_blue"] = StaticText("")
+		dnsDescription = _("DNS (Dynamic Name Server) Actions")
+		self["addAction"] = HelpableActionMap(self, ["DNSSettingsActions"], {
+			"dnsAdd": (self.addDNSServer, _("Add a DNS entry"))
+		}, prio=0, description=dnsDescription)
+		self["removeAction"] = HelpableActionMap(self, ["DNSSettingsActions"], {
+			"dnsRemove": (self.removeDNSServer, _("Remove a DNS entry"))
+		}, prio=0, description=dnsDescription)
+		self["removeAction"].setEnabled(False)
+		self["moveUpAction"] = HelpableActionMap(self, ["DNSSettingsActions"], {
+			"moveUp": (self.moveEntryUp, _("Move the current DNS entry up one line"))
+		}, prio=0, description=dnsDescription)
+		self["moveUpAction"].setEnabled(False)
+		self["moveDownAction"] = HelpableActionMap(self, ["DNSSettingsActions"], {
+			"moveDown": (self.moveEntryDown, _("Move the current DNS entry down one line"))
+		}, prio=0, description=dnsDescription)
+		self["moveDownAction"].setEnabled(False)
 
-		self["introduction"] = StaticText(_("Press OK to activate the settings."))
-		self.createConfig()
+	def dnsCheck(self, dnsServers, refresh=True):
+		def dnsRefresh(refresh):
+			if refresh:
+				for item in self["config"].getList():
+					if item[1] == config.usage.dns:
+						self["config"].invalidate(item)
+						break
 
-		self["OkCancelActions"] = HelpableActionMap(self, "OkCancelActions",
-			{
-			"cancel": (self.cancel, _("Exit nameserver configuration")),
-			"ok": (self.ok, _("Activate current configuration")),
-			})
-
-		self["ColorActions"] = HelpableActionMap(self, "ColorActions",
-			{
-			"red": (self.cancel, _("Exit nameserver configuration")),
-			"green": (self.ok, _("Activate current configuration")),
-			"yellow": (self.add, _("Add a nameserver entry")),
-			"blue": (self.remove, _("Remove a nameserver entry")),
-			})
-
-		self["actions"] = NumberActionMap(["SetupActions"],
-		{
-			"ok": self.ok,
-		}, -2)
-
-		self.list = []
-		ConfigListScreen.__init__(self, self.list)
-		self.createSetup()
-
-	def createConfig(self):
-		self.nameservers = iNetwork.getNameserverList()
-		if config.usage.dns.value == 'google':
-			self.nameserverEntries = [NoSave(ConfigIP(default=[8, 8, 8, 8])), NoSave(ConfigIP(default=[8, 8, 4, 4]))]
-		elif config.usage.dns.value == 'cloudflare':
-			self.nameserverEntries = [NoSave(ConfigIP(default=[1, 1, 1, 1])), NoSave(ConfigIP(default=[1, 0, 0, 1]))]
-		elif config.usage.dns.value == 'opendns-familyshield':
-			self.nameserverEntries = [NoSave(ConfigIP(default=[208, 67, 222, 123])), NoSave(ConfigIP(default=[208, 67, 220, 123]))]
-		elif config.usage.dns.value == 'opendns-home':
-			self.nameserverEntries = [NoSave(ConfigIP(default=[208, 67, 222, 222])), NoSave(ConfigIP(default=[208, 67, 220, 220]))]
-		elif config.usage.dns.value == 'custom' or config.usage.dns.value == 'dhcp-router':
-			self.nameserverEntries = [NoSave(ConfigIP(default=nameserver)) for nameserver in self.nameservers]
+		for option in self.dnsOptions.keys():
+			if dnsServers == self.dnsOptions[option]:
+				if option != "custom":
+					self.dnsOptions["custom"] = [[0, 0, 0, 0]]
+				config.usage.dns.value = option
+				dnsRefresh(refresh)
+				return option
+		option = "custom"
+		self.dnsOptions[option] = dnsServers[:]
+		config.usage.dns.value = option
+		dnsRefresh(refresh)
+		return option
 
 	def createSetup(self):
-		self.list = []
-		self.DNSEntry = getConfigListEntry(_("Nameserver configuration"), config.usage.dns)
-		self.list.append(self.DNSEntry)
+		Setup.createSetup(self)
+		dnsList = self["config"].getList()
+		self.dnsStart = len(dnsList)
+		for item, entry in enumerate([NoSave(ConfigIP(default=x)) for x in self.dnsServers], start=1):
+			dnsList.append(getConfigListEntry(_("Name server %d") % item, entry, _("Enter DNS (Dynamic Name Server) %d's IP address.") % item))
+		self.dnsLength = item
+		if self.entryAdded:
+			entry.default = [256, 256, 256, 256]  # This triggers a cancel confirmation for unedited new entries.
+			self.entryAdded = False
+		self["config"].setList(dnsList)
 
-		i = 1
-		for x in self.nameserverEntries:
-			self.list.append(getConfigListEntry(_("Nameserver %d") % i, x))
-			i += 1
+	def changedEntry(self):
+		current = self["config"].getCurrent()[1]
+		index = self["config"].getCurrentIndex()
+		if current == config.usage.dns:
+			self.dnsServers = self.dnsOptions[config.usage.dns.value][:]
+		elif self.dnsStart <= index < self.dnsStart + self.dnsLength:
+			self.dnsServers[index - self.dnsStart] = current.value[:]
+			option = self.dnsCheck(self.dnsServers, refresh=True)
+		Setup.changedEntry(self)
+		self.updateControls()
 
-		self["config"].list = self.list
-		self["config"].l.setList(self.list)
+	def selectionChanged(self):
+		Setup.selectionChanged(self)
+		self.updateControls()
 
-	def ok(self):
-		self.RefreshNameServerUsed()
+	def updateControls(self):
+		index = self["config"].getCurrentIndex() - self.dnsStart
+		if 0 <= index < self.dnsLength:
+			self["key_blue"].setText(_("Delete") if self.dnsLength > 1 or self.dnsServers[0] != [0, 0, 0, 0] else "")
+			self["removeAction"].setEnabled(self.dnsLength > 1 or self.dnsServers[0] != [0, 0, 0, 0])
+			self["moveUpAction"].setEnabled(index > 0)
+			self["moveDownAction"].setEnabled(index < self.dnsLength - 1)
+		else:
+			self["key_blue"].setText("")
+			self["removeAction"].setEnabled(False)
+			self["moveUpAction"].setEnabled(False)
+			self["moveDownAction"].setEnabled(False)
+
+	def keySave(self):
 		iNetwork.clearNameservers()
-		for nameserver in self.nameserverEntries:
-			iNetwork.addNameserver(nameserver.value)
+		for dnsServer in self.dnsServers:
+			iNetwork.addNameserver(dnsServer)
+		print("[NetworkSetup] DNSSettings: Saved DNS list: %s." % str(iNetwork.getNameserverList()))
+		# iNetwork.saveNameserverConfig()
 		iNetwork.writeNameserverConfig()
-		config.usage.dns.save()
-		self.close()
+		Setup.keySave(self)
 
-	def run(self):
-		self.ok()
-
-	def cancel(self):
-		iNetwork.clearNameservers()
-		print("backup-list:", self.backupNameserverList)
-		for nameserver in self.backupNameserverList:
-			iNetwork.addNameserver(nameserver)
-		self.close()
-
-	def add(self):
-		iNetwork.addNameserver([0, 0, 0, 0])
-		self.createConfig()
+	def addDNSServer(self):
+		self.entryAdded = True
+		self.dnsServers = self.dnsServers + [[0, 0, 0, 0]]
+		self.dnsCheck(self.dnsServers, refresh=False)
 		self.createSetup()
+		self["config"].setCurrentIndex(self.dnsStart + self.dnsLength - 1)
 
-	def remove(self):
-		print("currentIndex:", self["config"].getCurrentIndex())
-		index = self["config"].getCurrentIndex()
-		if index < len(self.nameservers):
-			iNetwork.removeNameserver(self.nameservers[index])
-			self.createConfig()
-			self.createSetup()
+	def removeDNSServer(self):
+		index = self["config"].getCurrentIndex() - self.dnsStart
+		if self.dnsLength == 1:
+			self.dnsServers = [[0, 0, 0, 0]]
+		else:
+			del self.dnsServers[index]
+		self.dnsCheck(self.dnsServers, refresh=False)
+		self.createSetup()
+		if index == self.dnsLength:
+			index -= 1
+		self["config"].setCurrentIndex(self.dnsStart + index)
 
-	def RefreshNameServerUsed(self):
-		print("[NetworkSetup] currentIndex:", self["config"].getCurrentIndex())
-		index = self["config"].getCurrentIndex()
-		if index < len(self.nameservers):
-			self.createConfig()
-			self.createSetup()
+	def moveEntryUp(self):
+		index = self["config"].getCurrentIndex() - self.dnsStart - 1
+		self.dnsServers.insert(index, self.dnsServers.pop(index + 1))
+		self.dnsCheck(self.dnsServers, refresh=False)
+		self.createSetup()
+		self["config"].setCurrentIndex(self.dnsStart + index)
+
+	def moveEntryDown(self):
+		index = self["config"].getCurrentIndex() - self.dnsStart + 1
+		self.dnsServers.insert(index, self.dnsServers.pop(index - 1))
+		self.dnsCheck(self.dnsServers, refresh=False)
+		self.createSetup()
+		self["config"].setCurrentIndex(self.dnsStart + index)
+
+	def getNetworkRoutes(self):
+		# # cat /proc/net/route
+		# Iface   Destination     Gateway         Flags   RefCnt  Use     Metric  Mask            MTU     Window  IRTT
+		# eth0    00000000        FE08A8C0        0003    0       0       0       00000000        0       0       0
+		# eth0    0008A8C0        00000000        0001    0       0       0       00FFFFFF        0       0       0
+		gateways = []
+		lines = []
+		lines = fileReadLines("/proc/net/route", lines, source=MODULE_NAME)
+		headings = lines.pop(0)
+		for line in lines:
+			data = line.split()
+			if data[1] == "00000000" and int(data[3]) & 0x03 and data[7] == "00000000":  # If int(flags) & 0x03 is True this is a gateway (0x02) and it is up (0x01).
+				gateways.append((data[0], tuple(reversed([int(data[2][x:x + 2], 16) for x in range(0, len(data[2]), 2)]))))
+		return gateways
+
+
+class NameserverSetup(DNSSettings):
+	def __init__(self, session):
+		DNSSettings.__init__(self, session=session)
 
 
 class NetworkMacSetup(Screen, ConfigListScreen, HelpableScreen):
@@ -596,14 +654,6 @@ class AdapterSetup(Screen, ConfigListScreen, HelpableScreen):
 			self.dhcpdefault = False
 		self.hasGatewayConfigEntry = NoSave(ConfigYesNo(default=self.dhcpdefault or False))
 		self.gatewayConfigEntry = NoSave(ConfigIP(default=iNetwork.getAdapterAttribute(self.iface, "gateway") or [0, 0, 0, 0]))
-		if iNetwork.getAdapterAttribute(self.iface, "dns-nameservers"):
-			self.dnsconfigdefault = True
-		else:
-			self.dnsconfigdefault = False
-		self.hasDNSConfigEntry = NoSave(ConfigYesNo(default=self.dnsconfigdefault or False))
-		manualNameservers = (iNetwork.getInterfacesNameserverList(self.iface) + [[0, 0, 0, 0]] * 2)[0:2]
-		self.manualPrimaryDNS = NoSave(ConfigIP(default=manualNameservers[0]))
-		self.manualSecondaryDNS = NoSave(ConfigIP(default=manualNameservers[1]))
 		nameserver = (iNetwork.getNameserverList() + [[0, 0, 0, 0]] * 2)[0:2]
 		self.primaryDNS = NoSave(ConfigIP(default=nameserver[0]))
 		self.secondaryDNS = NoSave(ConfigIP(default=nameserver[1]))
@@ -628,12 +678,6 @@ class AdapterSetup(Screen, ConfigListScreen, HelpableScreen):
 				self.list.append(self.gatewayEntry)
 				if self.hasGatewayConfigEntry.value:
 					self.list.append(getConfigListEntry(_('Gateway'), self.gatewayConfigEntry))
-
-			if not self.dhcpConfigEntry.value:
-				self.primaryDNSEntry = getConfigListEntry(_('Primary DNS') + " (" + _("Nameserver %d") % 1 + ")", self.manualPrimaryDNS)
-				self.secondaryDNSEntry = getConfigListEntry(_('Secondary DNS') + " (" + _("Nameserver %d") % 2 + ")", self.manualSecondaryDNS)
-				self.list.append(self.primaryDNSEntry)
-				self.list.append(self.secondaryDNSEntry)
 
 			havewol = False
 			if BoxInfo.getItem("WakeOnLAN") and not BoxInfo.getItem("model") in ('et10000', 'gb800seplus', 'gb800ueplus', 'gbultrase', 'gbultraue', 'gbultraueh', 'gbipbox', 'gbquad', 'gbx1', 'gbx2', 'gbx3', 'gbx3h'):
@@ -754,14 +798,6 @@ class AdapterSetup(Screen, ConfigListScreen, HelpableScreen):
 			else:
 				iNetwork.removeAdapterAttribute(self.iface, "gateway")
 
-			if self.hasDNSConfigEntry.value or not self.dhcpConfigEntry.value:
-				interfacesDnsLines = self.makeLineDnsNameservers([self.manualPrimaryDNS.value, self.manualSecondaryDNS.value])
-				if interfacesDnsLines == "":
-					interfacesDnsLines = False
-				iNetwork.setAdapterAttribute(self.iface, "dns-nameservers", interfacesDnsLines)
-			else:
-				iNetwork.setAdapterAttribute(self.iface, "dns-nameservers", False)
-
 			if self.extended != None and self.configStrings != None:
 				iNetwork.setAdapterAttribute(self.iface, "configStrings", self.configStrings(self.iface))
 				self.ws.writeConfig(self.iface)
@@ -866,7 +902,7 @@ class AdapterSetupConfiguration(Screen, HelpableScreen):
 	def __init__(self, session, iface):
 		Screen.__init__(self, session)
 		HelpableScreen.__init__(self)
-		Screen.setTitle(self, _("Network Setup"))
+		Screen.setTitle(self, _("Network Settings"))
 		self.iface = iface
 		self.restartLanRef = None
 		self.LinkState = None
@@ -1059,7 +1095,7 @@ class AdapterSetupConfiguration(Screen, HelpableScreen):
 		pass
 
 	def genMainMenu(self):
-		menu = [(_("Adapter settings"), "edit"), (_("Nameserver settings"), "dns"), (_("Network test"), "test"), (_("Restart network"), "lanrestart")]
+		menu = [(_("Adapter settings"), "edit"), (_("Nameserver settings"), "dns"), (_("Network test"), "test"), (_("Restart Network"), "lanrestart")]
 
 		self.extended = None
 		self.extendedSetup = None
@@ -1084,7 +1120,7 @@ class AdapterSetupConfiguration(Screen, HelpableScreen):
 					menu.append((menuEntryName, self.extendedSetup))
 
 		if os_path.exists(resolveFilename(SCOPE_PLUGINS, "SystemPlugins/NetworkWizard/networkwizard.xml")):
-			menu.append((_("Network wizard"), "openwizard"))
+			menu.append((_("Network Wizard"), "openwizard"))
 		# CHECK WHICH BOXES NOW SUPPORT MAC-CHANGE VIA GUI
 		if BoxInfo.getItem("model") not in ('DUMMY',) and self.iface == 'eth0':
 			menu.append((_("Network MAC settings"), "mac"))
@@ -1633,7 +1669,7 @@ class NetworkMountsMenu(Screen, HelpableScreen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
 		HelpableScreen.__init__(self)
-		Screen.setTitle(self, _("Mounts Setup"))
+		Screen.setTitle(self, _("Mounts Settings"))
 		self.onChangedEntry = []
 		self.mainmenu = self.genMainMenu()
 		self["menulist"] = MenuList(self.mainmenu)
@@ -1732,7 +1768,7 @@ class NetworkMountsMenu(Screen, HelpableScreen):
 class NetworkAfp(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("AFP Setup"))
+		Screen.setTitle(self, _("AFP Settings"))
 		self.skinName = "NetworkAfp"
 		self.onChangedEntry = []
 		self['lab1'] = Label(_("Autostart:"))
@@ -1790,7 +1826,7 @@ class NetworkAfp(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -1813,7 +1849,7 @@ class NetworkAfp(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -1866,7 +1902,7 @@ class NetworkAfp(Screen):
 			self['labactive'].show()
 			self['key_green'].setText(_("Start"))
 			status_summary = self['lab2'].text + ' ' + self['labstop'].text
-		title = _("AFP Setup")
+		title = _("AFP Settings")
 		autostartstatus_summary = self['lab1'].text + ' ' + self['labactive'].text
 
 		for cb in self.onChangedEntry:
@@ -1877,7 +1913,7 @@ class NetworkAfp(Screen):
 class NetworkSABnzbd(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("SABnzbd Setup"))
+		Screen.setTitle(self, _("SABnzbd Settings"))
 		self.skinName = "NetworkSABnzbd"
 		self.onChangedEntry = []
 		self['lab1'] = Label(_("Autostart:"))
@@ -1936,7 +1972,7 @@ class NetworkSABnzbd(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -1960,7 +1996,7 @@ class NetworkSABnzbd(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -1992,7 +2028,8 @@ class NetworkSABnzbd(Screen):
 	def updateService(self, result=None, retval=None, extra_args=None):
 		import process
 		p = process.ProcessList()
-		sabnzbd_process = str(p.named('SABnzbd.py')).strip('[]')
+		sabnzbd_processpy = str(p.named('SABnzbd.py')).strip('[]')
+		sabnzbd_processpyc = str(p.named('SABnzbd.pyc')).strip('[]')
 		self['labrun'].hide()
 		self['labstop'].hide()
 		self['labactive'].setText(_("Disabled"))
@@ -2002,7 +2039,7 @@ class NetworkSABnzbd(Screen):
 			self['labactive'].setText(_("Enabled"))
 			self['labactive'].show()
 			self.my_sabnzbd_active = True
-		if sabnzbd_process:
+		if sabnzbd_processpy or sabnzbd_processpyc:
 			self.my_sabnzbd_run = True
 		if self.my_sabnzbd_run:
 			self['labstop'].hide()
@@ -2016,7 +2053,7 @@ class NetworkSABnzbd(Screen):
 			self['labactive'].show()
 			self['key_green'].setText(_("Start"))
 			status_summary = self['lab2'].text + ' ' + self['labstop'].text
-		title = _("SABnzbd Setup")
+		title = _("SABnzbd Settings")
 		autostartstatus_summary = self['lab1'].text + ' ' + self['labactive'].text
 
 		for cb in self.onChangedEntry:
@@ -2028,7 +2065,7 @@ class NetworkSABnzbd(Screen):
 class NetworkFtp(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("FTP Setup"))
+		Screen.setTitle(self, _("FTP Settings"))
 		self.skinName = "NetworkSamba"
 		self.onChangedEntry = []
 		self['lab1'] = Label(_("Autostart:"))
@@ -2100,7 +2137,7 @@ class NetworkFtp(Screen):
 			self['labactive'].show()
 			self['key_green'].setText(_("Start"))
 			status_summary = self['lab2'].text + ' ' + self['labstop'].text
-		title = _("FTP Setup")
+		title = _("FTP Settings")
 		autostartstatus_summary = self['lab1'].text + ' ' + self['labactive'].text
 
 		for cb in self.onChangedEntry:
@@ -2110,7 +2147,7 @@ class NetworkFtp(Screen):
 class NetworkNfs(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("NFS Setup"))
+		Screen.setTitle(self, _("NFS Settings"))
 		self.skinName = "NetworkNfs"
 		self.onChangedEntry = []
 		self['lab1'] = Label(_("Autostart:"))
@@ -2166,7 +2203,7 @@ class NetworkNfs(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -2189,7 +2226,7 @@ class NetworkNfs(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -2240,7 +2277,7 @@ class NetworkNfs(Screen):
 			self['labrun'].hide()
 			self['key_green'].setText(_("Start"))
 			status_summary = self['lab2'].text + ' ' + self['labstop'].text
-		title = _("NFS Setup")
+		title = _("NFS Settings")
 		autostartstatus_summary = self['lab1'].text + ' ' + self['labactive'].text
 
 		for cb in self.onChangedEntry:
@@ -2250,7 +2287,7 @@ class NetworkNfs(Screen):
 class NetworkOpenvpn(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("OpenVpn Setup"))
+		Screen.setTitle(self, _("OpenVPN Settings"))
 		self.skinName = "NetworkOpenvpn"
 		self.onChangedEntry = []
 		self['lab1'] = Label(_("Autostart:"))
@@ -2309,7 +2346,7 @@ class NetworkOpenvpn(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -2333,7 +2370,7 @@ class NetworkOpenvpn(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -2388,7 +2425,7 @@ class NetworkOpenvpn(Screen):
 			self['labrun'].hide()
 			self['key_green'].setText(_("Start"))
 			status_summary = self['lab2'].text + ' ' + self['labstop'].text
-		title = _("OpenVpn Setup")
+		title = _("OpenVPN Settings")
 		autostartstatus_summary = self['lab1'].text + ' ' + self['labactive'].text
 
 		self['labconfig'].show()
@@ -2491,7 +2528,7 @@ class NetworkSamba(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -2515,7 +2552,7 @@ class NetworkSamba(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -2609,7 +2646,7 @@ class NetworkSambaLog(Screen):
 class NetworkTelnet(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("Telnet Setup"))
+		Screen.setTitle(self, _("Telnet Settings"))
 		self.skinName = "NetworkSamba"
 		self.onChangedEntry = []
 		self['lab1'] = Label(_("Autostart:"))
@@ -2679,7 +2716,7 @@ class NetworkTelnet(Screen):
 			self['labactive'].show()
 			self['key_green'].setText(_("Start"))
 			status_summary = self['lab2'].text + ' ' + self['labstop'].text
-		title = _("Telnet Setup")
+		title = _("Telnet Settings")
 		autostartstatus_summary = self['lab1'].text + ' ' + self['labactive'].text
 
 		for cb in self.onChangedEntry:
@@ -2689,7 +2726,7 @@ class NetworkTelnet(Screen):
 class NetworkInadyn(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("Inadyn Setup"))
+		Screen.setTitle(self, _("Inadyn Settings"))
 		self.onChangedEntry = []
 		self['autostart'] = Label(_("Autostart:"))
 		self['labactive'] = Label(_(_("Active")))
@@ -2755,7 +2792,7 @@ class NetworkInadyn(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -2779,7 +2816,7 @@ class NetworkInadyn(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -2866,7 +2903,7 @@ class NetworkInadyn(Screen):
 						self['sactive'].show()
 					self['labsys'].setText(line)
 			f.close()
-		title = _("Inadyn Setup")
+		title = _("Inadyn Settings")
 
 		for cb in self.onChangedEntry:
 			cb(title, status_summary, autostartstatus_summary)
@@ -2884,7 +2921,7 @@ class NetworkInadynSetup(Screen, ConfigListScreen):
 		self.onChangedEntry = []
 		self.list = []
 		ConfigListScreen.__init__(self, self.list, session=session, on_change=self.selectionChanged)
-		Screen.setTitle(self, _("Inadyn Setup"))
+		Screen.setTitle(self, _("Inadyn Settings"))
 		self['key_red'] = Label(_("Save"))
 		self['actions'] = ActionMap(['WizardActions', 'ColorActions', 'VirtualKeyboardActions'], {'red': self.saveIna, 'back': self.close, 'showVirtualKeyboard': self.KeyText})
 		self["HelpWindow"] = Pixmap()
@@ -2913,7 +2950,7 @@ class NetworkInadynSetup(Screen, ConfigListScreen):
 		self.ina_pass = NoSave(ConfigText(fixed_size=False))
 		self.ina_alias = NoSave(ConfigText(fixed_size=False))
 		self.ina_period = NoSave(ConfigNumber())
-		self.ina_sysactive = NoSave(ConfigYesNo(default='False'))
+		self.ina_sysactive = NoSave(ConfigYesNo(default=False))
 		self.ina_system = NoSave(ConfigSelection(default="dyndns@dyndns.org", choices=[("dyndns@dyndns.org", "dyndns@dyndns.org"), ("statdns@dyndns.org", "statdns@dyndns.org"), ("custom@dyndns.org", "custom@dyndns.org"), ("default@no-ip.com", "default@no-ip.com")]))
 
 		if fileExists('/etc/inadyn.conf'):
@@ -3028,13 +3065,13 @@ class NetworkInadynLog(Screen):
 
 
 config.networkushare = ConfigSubsection()
-config.networkushare.mediafolders = NoSave(ConfigLocations(default=""))
+config.networkushare.mediafolders = NoSave(ConfigLocations(default=None))
 
 
 class NetworkuShare(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("uShare Setup"))
+		Screen.setTitle(self, _("uShare Settings"))
 		self.onChangedEntry = []
 		self['autostart'] = Label(_("Autostart:"))
 		self['labactive'] = Label(_(_("Active")))
@@ -3111,7 +3148,7 @@ class NetworkuShare(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -3135,7 +3172,7 @@ class NetworkuShare(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -3247,7 +3284,7 @@ class NetworkuShare(Screen):
 						self['dlnaactive'].show()
 						self['dlnainactive'].hide()
 			f.close()
-		title = _("uShare Setup")
+		title = _("uShare Settings")
 
 		for cb in self.onChangedEntry:
 			cb(title, status_summary, autostartstatus_summary)
@@ -3262,11 +3299,11 @@ class NetworkuShare(Screen):
 class NetworkuShareSetup(Screen, ConfigListScreen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("uShare Setup"))
+		Screen.setTitle(self, _("uShare Settings"))
 		self.onChangedEntry = []
 		self.list = []
 		ConfigListScreen.__init__(self, self.list, session=session, on_change=self.selectionChanged)
-		Screen.setTitle(self, _("uShare Setup"))
+		Screen.setTitle(self, _("uShare Settings"))
 		self['key_red'] = Label(_("Save"))
 		self['key_green'] = Label(_("Shares"))
 		self['actions'] = ActionMap(['WizardActions', 'ColorActions', 'VirtualKeyboardActions'], {'red': self.saveuShare, 'green': self.selectfolders, 'back': self.close, 'showVirtualKeyboard': self.KeyText})
@@ -3297,10 +3334,10 @@ class NetworkuShareSetup(Screen, ConfigListScreen):
 		self.ushare_iface = NoSave(ConfigText(fixed_size=False))
 		self.ushare_port = NoSave(ConfigNumber())
 		self.ushare_telnetport = NoSave(ConfigNumber())
-		self.ushare_web = NoSave(ConfigYesNo(default='True'))
-		self.ushare_telnet = NoSave(ConfigYesNo(default='True'))
-		self.ushare_xbox = NoSave(ConfigYesNo(default='True'))
-		self.ushare_ps3 = NoSave(ConfigYesNo(default='True'))
+		self.ushare_web = NoSave(ConfigYesNo(default=True))
+		self.ushare_telnet = NoSave(ConfigYesNo(default=True))
+		self.ushare_xbox = NoSave(ConfigYesNo(default=True))
+		self.ushare_ps3 = NoSave(ConfigYesNo(default=True))
 		self.ushare_system = NoSave(ConfigSelection(default="dyndns@dyndns.org", choices=[("dyndns@dyndns.org", "dyndns@dyndns.org"), ("statdns@dyndns.org", "statdns@dyndns.org"), ("custom@dyndns.org", "custom@dyndns.org")]))
 
 		if fileExists('/etc/ushare.conf'):
@@ -3531,13 +3568,13 @@ class NetworkuShareLog(Screen):
 
 
 config.networkminidlna = ConfigSubsection()
-config.networkminidlna.mediafolders = NoSave(ConfigLocations(default=""))
+config.networkminidlna.mediafolders = NoSave(ConfigLocations(default=None))
 
 
 class NetworkMiniDLNA(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("MiniDLNA Setup"))
+		Screen.setTitle(self, _("MiniDLNA Settings"))
 		self.onChangedEntry = []
 		self['autostart'] = Label(_("Autostart:"))
 		self['labactive'] = Label(_(_("Active")))
@@ -3611,7 +3648,7 @@ class NetworkMiniDLNA(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -3635,7 +3672,7 @@ class NetworkMiniDLNA(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -3736,7 +3773,7 @@ class NetworkMiniDLNA(Screen):
 						self['dlnaactive'].show()
 						self['dlnainactive'].hide()
 			f.close()
-		title = _("MiniDLNA Setup")
+		title = _("MiniDLNA Settings")
 
 		for cb in self.onChangedEntry:
 			cb(title, status_summary, autostartstatus_summary)
@@ -3751,11 +3788,11 @@ class NetworkMiniDLNA(Screen):
 class NetworkMiniDLNASetup(Screen, ConfigListScreen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("MiniDLNA Setup"))
+		Screen.setTitle(self, _("MiniDLNA Settings"))
 		self.onChangedEntry = []
 		self.list = []
 		ConfigListScreen.__init__(self, self.list, session=session, on_change=self.selectionChanged)
-		Screen.setTitle(self, _("MiniDLNA Setup"))
+		Screen.setTitle(self, _("MiniDLNA Settings"))
 		self.skinName = "NetworkuShareSetup"
 		self['key_red'] = Label(_("Save"))
 		self['key_green'] = Label(_("Shares"))
@@ -3787,10 +3824,10 @@ class NetworkMiniDLNASetup(Screen, ConfigListScreen):
 		self.minidlna_iface = NoSave(ConfigText(fixed_size=False))
 		self.minidlna_port = NoSave(ConfigNumber())
 		self.minidlna_serialno = NoSave(ConfigNumber())
-		self.minidlna_web = NoSave(ConfigYesNo(default='True'))
-		self.minidlna_inotify = NoSave(ConfigYesNo(default='True'))
-		self.minidlna_tivo = NoSave(ConfigYesNo(default='True'))
-		self.minidlna_strictdlna = NoSave(ConfigYesNo(default='True'))
+		self.minidlna_web = NoSave(ConfigYesNo(default=True))
+		self.minidlna_inotify = NoSave(ConfigYesNo(default=True))
+		self.minidlna_tivo = NoSave(ConfigYesNo(default=True))
+		self.minidlna_strictdlna = NoSave(ConfigYesNo(default=True))
 
 		if fileExists('/etc/minidlna.conf'):
 			f = open('/etc/minidlna.conf', 'r')
@@ -4029,131 +4066,77 @@ class NetworkServicesSummary(Screen):
 		self["autostartstatus_summary"].text = autostartstatus_summary
 
 
-class NetworkPassword(ConfigListScreen, Screen):
+class NetworkPassword(Setup):
 	def __init__(self, session):
-		Screen.__init__(self, session)
-		self.skinName = "NetworkPassword"
-		self.onChangedEntry = []
-		self.list = []
-		ConfigListScreen.__init__(self, self.list, session=session, on_change=self.selectionChanged)
-		Screen.setTitle(self, _("Password Setup"))
-
-		self["key_red"] = StaticText(_("Exit"))
-		self["key_green"] = StaticText(_("Save"))
-		self["key_yellow"] = StaticText(_("Random password"))
-		self["key_blue"] = StaticText("")
-
-		self["actions"] = ActionMap(["SetupActions", "ColorActions", "VirtualKeyboardActions"], {
-			"red": self.close,
-			"cancel": self.close,
-			"green": self.SetPasswd,
-			"save": self.SetPasswd,
-			"yellow": self.newRandom,
-			'showVirtualKeyboard': self.KeyText
-			})
-
-		self["description"] = Label()
-		self['footnote'] = Label()
-		self["VKeyIcon"] = Boolean(False)
-		self["HelpWindow"] = Pixmap()
-		self["HelpWindow"].hide()
-
+		config.network.password = NoSave(ConfigPassword(default=""))
+		Setup.__init__(self, session=session, setup="Password")
+		self["key_yellow"] = StaticText(_("Random Password"))
+		self["passwordActions"] = HelpableActionMap(self, ["ColorActions"], {
+			"yellow": (self.randomPassword, _("Create a randomly generated password"))
+		}, prio=0, description=_("Password Actions"))
 		self.user = "root"
-		self.output_line = ""
+		self.counter = 0
+		self.timer = eTimer()
+		self.timer.callback.append(self.appClosed)
+		self.language = "C.UTF-8"  # This is a complete hack to negate all the plugins that inappropriately change the language!!!
 
-		self.updateList()
-		if self.selectionChanged not in self["config"].onSelectionChanged:
-			self["config"].onSelectionChanged.append(self.selectionChanged)
-		self.selectionChanged()
+	def keySave(self):
+		password = config.network.password.value
+		if not password:
+			print("[NetworkSetup] NetworkPassword: Error: The new password may not be blank!")
+			self.session.open(MessageBox, _("Error: The new password may not be blank!"), MessageBox.TYPE_ERROR)
+			return
+		# print("[NetworkSetup] NetworkPassword: Changing the password for '%s' to '%s'." % (self.user, password))
+		print("[NetworkSetup] NetworkPassword: Changing the password for '%s'." % self.user)
+		self.language = environ["LANGUAGE"]  # This is a complete hack to negate all the plugins that inappropriately change the language!!!
+		environ["LANGUAGE"] = "C.UTF-8"
+		self.container = eConsoleAppContainer()
+		self.container.dataAvail.append(self.dataAvail)
+		self.container.appClosed.append(self.appClosed)
+		status = self.container.execute(*("/usr/bin/passwd", "/usr/bin/passwd", self.user))
+		if status:  # If status is -1 code is already/still running, is status is -3 code can not be started!
+			self.session.open(MessageBox, _("Error %d: Unable to start 'passwd' command!") % status, MessageBox.TYPE_ERROR)
+			Setup.keySave(self)
+		else:
+			self.timer.start(3000)
 
-	def selectionChanged(self):
-		item = self["config"].getCurrent()
-		self["description"].setText(item[2])
-
-	def newRandom(self):
-		self.password.value = self.GeneratePassword()
+	def randomPassword(self):
+		passwdChars = string.ascii_letters + string.digits
+		passwdLength = 10
+		config.network.password.value = "".join(Random().sample(passwdChars, passwdLength))
 		self["config"].invalidateCurrent()
 
-	def updateList(self):
-		self.password = NoSave(ConfigPassword(default=""))
-		instructions = _("You must set a root password in order to be able to use network services,"
-						" such as FTP, telnet or ssh.")
-		self.list.append(getConfigListEntry(_('New password'), self.password, instructions))
-		self['config'].list = self.list
-		self['config'].l.setList(self.list)
-
-	def GeneratePassword(self):
-		passwdChars = string.letters + string.digits
-		passwdLength = 10
-		return ''.join(Random().sample(passwdChars, passwdLength))
-
-	def SetPasswd(self):
-		self.hideHelpWindow()
-		password = self.password.value
-		if not password:
-			self.session.openWithCallback(self.showHelpWindow, MessageBox, _("The password can not be blank."), MessageBox.TYPE_ERROR)
-			return
-		#print "[NetworkPassword] Changing the password for %s to %s" % (self.user,self.password)
-		self.container = eConsoleAppContainer()
-		self.container.appClosed.append(self.runFinished)
-		self.container.dataAvail.append(self.dataAvail)
-		retval = self.container.execute("echo -e '%s\n%s' | (passwd %s)" % (password, password, self.user))
-		if retval:
-			message = _("Unable to change password")
-			self.session.openWithCallback(self.showHelpWindow, MessageBox, message, MessageBox.TYPE_ERROR)
-		else:
-			message = _("Password changed")
-			self.session.open(MessageBox, message, MessageBox.TYPE_INFO, timeout=5)
-			self.close()
-
-	def showHelpWindow(self, ret=None):
-		if self['config'].getCurrent() and isinstance(self["config"].getCurrent()[1], ConfigText) or isinstance(self["config"].getCurrent()[1], ConfigPassword):
-			if self["config"].getCurrent()[1].help_window.instance != None:
-				self["config"].getCurrent()[1].help_window.show()
-
-	def hideHelpWindow(self):
-		if self['config'].getCurrent() and isinstance(self["config"].getCurrent()[1], ConfigText) or isinstance(self["config"].getCurrent()[1], ConfigPassword):
-			if self["config"].getCurrent()[1].help_window.instance != None:
-				self["config"].getCurrent()[1].help_window.hide()
-
-	def KeyText(self):
-		if self['config'].getCurrent() and isinstance(self["config"].getCurrent()[1], ConfigText) or isinstance(self["config"].getCurrent()[1], ConfigPassword):
-			if self["config"].getCurrent()[1].help_window.instance != None:
-				self["config"].getCurrent()[1].help_window.hide()
-			from Screens.VirtualKeyBoard import VirtualKeyBoard
-			self.session.openWithCallback(self.VirtualKeyBoardCallback, VirtualKeyBoard, title=self["config"].getCurrent()[0], text=self["config"].getCurrent()[1].value)
-
-	def VirtualKeyBoardCallback(self, callback=None):
-		if callback != None and len(callback):
-			self["config"].getCurrent()[1].setValue(callback)
-			self["config"].invalidate(self["config"].getCurrent())
-		self.showHelpWindow()
-
 	def dataAvail(self, data):
-		data = six.ensure_str(data)
-		self.output_line += data
-		while True:
-			i = self.output_line.find('\n')
-			if i == -1:
-				break
-			self.processOutputLine(self.output_line[:i + 1])
-			self.output_line = self.output_line[i + 1:]
+		data = data.decode("UTF-8", "ignore")
+		# print("[NetworkSetup] DEBUG NetworkPassword: data='%s'." % data)
+		if data.endswith("password: "):
+			self.container.write("%s\n" % config.network.password.value)
+			self.counter += 1
 
-	def processOutputLine(self, line):
-		if line.find('password: '):
-			self.container.write("%s\n" % self.password.value)
-
-	def runFinished(self, retval):
+	def appClosed(self, retVal=ETIMEDOUT):
+		self.timer.stop()
+		environ["LANGUAGE"] = self.language  # This is a complete hack to negate all the plugins that inappropriately change the language!!!
+		if retVal:
+			if retVal == ETIMEDOUT:
+				self.container.kill()
+			print("[NetworkSetup] NetworkPassword: Error %d: Unable to change password!  (%s)" % (retVal, strerror(retVal)))
+			self.session.open(MessageBox, _("Error %d: Unable to change password!  (%s)") % (retVal, strerror(retVal)), MessageBox.TYPE_ERROR)
+		elif self.counter == 2:
+			print("[NetworkSetup] NetworkPassword: Password changed.")
+			self.session.open(MessageBox, _("Password changed."), MessageBox.TYPE_INFO, timeout=5)
+			Setup.keySave(self)
+		else:
+			print("[NetworkSetup] NetworkPassword: Error: Unexpected program interaction!")
+			self.session.open(MessageBox, _("Error: Interaction failure, unable to change password!"), MessageBox.TYPE_ERROR)
 		del self.container.dataAvail[:]
 		del self.container.appClosed[:]
 		del self.container
-		self.close()
 
 
 class NetworkSATPI(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("SATPI Setup"))
+		Screen.setTitle(self, _("SATPI Settings"))
 		self.skinName = "NetworkSATPI"
 		self.onChangedEntry = []
 		self['lab1'] = Label(_("Autostart:"))
@@ -4211,7 +4194,7 @@ class NetworkSATPI(Screen):
 		self.close()
 
 	def doInstall(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Installing Service'))
 		self.Console.ePopen('/usr/bin/opkg install ' + pkgname, callback)
 
@@ -4235,7 +4218,7 @@ class NetworkSATPI(Screen):
 			self.doRemove(self.removeComplete, self.service_name)
 
 	def doRemove(self, callback, pkgname):
-		self.message = self.session.open(MessageBox, _("please wait..."), MessageBox.TYPE_INFO, enable_input=False)
+		self.message = self.session.open(MessageBox, _("Please wait..."), MessageBox.TYPE_INFO, enable_input=False)
 		self.message.setTitle(_('Removing Service'))
 		self.Console.ePopen('/usr/bin/opkg remove ' + pkgname + ' --force-remove --autoremove', callback)
 
@@ -4291,7 +4274,7 @@ class NetworkSATPI(Screen):
 			self['labactive'].show()
 			self['key_green'].setText(_("Start"))
 			status_summary = self['lab2'].text + ' ' + self['labstop'].text
-		title = _("SATPI Setup")
+		title = _("SATPI Settings")
 		autostartstatus_summary = self['lab1'].text + ' ' + self['labactive'].text
 
 		for cb in self.onChangedEntry:

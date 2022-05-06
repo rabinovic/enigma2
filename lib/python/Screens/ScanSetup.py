@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 from Screens.Screen import Screen
 from Screens.ServiceScan import ServiceScan
-from Components.config import config, ConfigSubsection, ConfigSelection, ConfigYesNo, ConfigInteger, getConfigListEntry, ConfigSlider, ConfigEnableDisable, integer_limits, ConfigFloat
+from Components.config import config, ConfigSubsection, ConfigSelection, ConfigYesNo, ConfigInteger, getConfigListEntry, ConfigSlider, ConfigEnableDisable, ConfigFloat
 
 from Components.ActionMap import NumberActionMap, ActionMap
 from Components.ConfigList import ConfigListScreen
@@ -191,7 +191,7 @@ class CableTransponderSearchSupport:
 	def tryGetRawFrontend(self, feid, delsys=None):
 		res_mgr = eDVBResourceManager.getInstance()
 		if res_mgr:
-			raw_channel = res_mgr.allocateRawChannel(self.feid)
+			raw_channel = res_mgr.allocateRawChannel(feid)
 			if raw_channel:
 				frontend = raw_channel.getFrontend()
 				if frontend:
@@ -605,32 +605,6 @@ class TerrestrialTransponderSearchSupport:
 			cmd += " --feid %d --5v %d" % (self.terrestrial_search_feid, self.terrestrial_search_enable_5v)
 		print("SCAN CMD : ", cmd)
 		self.terrestrial_search_container.execute(cmd)
-
-
-class ConfigFrequency(ConfigInteger):
-	def __init__(self, default, limits=integer_limits):
-		self._value = None
-		ConfigInteger.__init__(self, default, limits)
-
-	def setValue(self, value):
-		if self._value != [value]:
-			self._value = [value]
-			self.changed()
-
-	value = property(ConfigInteger.getValue, setValue)
-
-
-class ConfigChannel(ConfigInteger):
-	def __init__(self, default, limits=integer_limits):
-		self._value = None
-		ConfigInteger.__init__(self, default, limits)
-
-	def setValue(self, value):
-		if self._value != [value]:
-			self._value = [value]
-			self.changed()
-
-	value = property(ConfigInteger.getValue, setValue)
 
 
 class ScanSetup(ConfigListScreen, Screen, CableTransponderSearchSupport, TerrestrialTransponderSearchSupport):
@@ -1265,7 +1239,7 @@ class ScanSetup(ConfigListScreen, Screen, CableTransponderSearchSupport, Terrest
 
 		# terrestial
 		self.scan_ter.frequency = ConfigFloat(default=[defaultTer["frequency"] // 1000, defaultTer["frequency"] % 1000], limits=[(50, 999), (0, 999)])
-		self.scan_ter.channel = ConfigChannel(default=21, limits=(1, 99))
+		self.scan_ter.channel = ConfigInteger(default=21, limits=(1, 99))
 		self.scan_ter.inversion = ConfigSelection(default=defaultTer["inversion"], choices=[
 			(eDVBFrontendParametersTerrestrial.Inversion_Off, _("Off")),
 			(eDVBFrontendParametersTerrestrial.Inversion_On, _("On")),
@@ -1401,7 +1375,7 @@ class ScanSetup(ConfigListScreen, Screen, CableTransponderSearchSupport, Terrest
 		self.scan_typeterrestrial = ConfigSelection(default=defaultTerrSearchType, choices=[("single_transponder", _("User defined transponder")), ("predefined_transponder", _("Predefined transponder")), ("complete", _("Complete"))])
 		self.scan_typeatsc = ConfigSelection(default=defaultATSCSearchType, choices=[("single_transponder", _("User defined transponder")), ("predefined_transponder", _("Predefined transponder")), ("complete", _("Complete"))])
 		self.scan_input_as = ConfigSelection(default="channel", choices=[("frequency", _("Frequency")), ("channel", _("Channel"))])
-		self.scan_clearallservices = ConfigSelection(default="no", choices=[("no", _("no")), ("yes", _("yes")), ("yes_hold_feeds", _("yes (keep feeds)"))])
+		self.scan_clearallservices = ConfigSelection(default="no", choices=[("no", _("No")), ("yes", _("Yes")), ("yes_hold_feeds", _("yes (keep feeds)"))])
 		self.scan_onlyfree = ConfigYesNo(default=False)
 		self.scan_networkScan = ConfigYesNo(default=False)
 
@@ -1629,7 +1603,7 @@ class ScanSetup(ConfigListScreen, Screen, CableTransponderSearchSupport, Terrest
 		elif nim.isCompatible("DVB-T"):
 			if self.scan_typeterrestrial.value == "single_transponder":
 				if self.scan_input_as.value == "channel":
-					frequency = channel2frequency(self.scan_ter.channel.value, self.ter_tnumber)
+					frequency = int(channel2frequency(self.scan_ter.channel.value, self.ter_tnumber))
 				else:
 					frequency = self.scan_ter.frequency.floatint * 1000
 				self.addTerTransponder(tlist,
@@ -2024,7 +1998,7 @@ class ScanSimple(ConfigListScreen, Screen, CableTransponderSearchSupport, Terres
 
 		if len(nims_to_scan):
 			self.scan_networkScan = ConfigYesNo(default=True)
-			self.scan_clearallservices = ConfigSelection(default="yes", choices=[("no", _("no")), ("yes", _("yes")), ("yes_hold_feeds", _("yes (keep feeds)"))])
+			self.scan_clearallservices = ConfigSelection(default="yes", choices=[("no", _("No")), ("yes", _("Yes")), ("yes_hold_feeds", _("yes (keep feeds)"))])
 			self.list.append(getConfigListEntry(_("Network scan"), self.scan_networkScan))
 			self.list.append(getConfigListEntry(_("Clear before scan"), self.scan_clearallservices))
 
@@ -2087,7 +2061,7 @@ class ScanSimple(ConfigListScreen, Screen, CableTransponderSearchSupport, Terres
 								break
 		self.list.sort()
 		ConfigListScreen.__init__(self, self.list)
-		self["header"] = Label(_("Automatic scan"))
+		self["header"] = Label(_("Automatic Scan"))
 		self["footer"] = Label(_("Press OK to scan"))
 
 	def runAsync(self, finished_cb):

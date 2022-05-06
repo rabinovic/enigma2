@@ -145,7 +145,6 @@
 	</map>
 
 	<map context="InfobarEPGActions">
-		<key id="KEY_RED" mapto="RedPressed" flags="b" />
 		<key id="KEY_I" mapto="IPressed" flags="b" />
 		<key id="KEY_INFO" mapto="InfoPressed" flags="b" />
 		<key id="KEY_INFO" mapto="showEventInfoPlugin" flags="l" />
@@ -157,7 +156,6 @@
 		<key id="KEY_RECORD" mapto="instantRecord" flags="b" />
 		<key id="KEY_RECORD" mapto="ShortRecord" flags="b" />
 		<key id="KEY_RECORD" mapto="LongRecord" flags="l" />
-		<key id="KEY_RED" mapto="instantRecord" flags="b" />
 	</map>
 
 	<map context="InfobarExtensions">
@@ -348,7 +346,7 @@
 	</map>
 
 	<map context="InfobarRedButtonActions">
-		<key id="KEY_RED" mapto="activateRedButton" flags="l" />
+		<key id="KEY_RED" mapto="activateRedButton" flags="b" />
 	</map>
 
 	<map context="InfobarTimerButtonActions">
@@ -960,10 +958,6 @@
 		<key id="KEY_CHANNELUP" mapto="incUphop" flags="m"/>
 		<key id="KEY_CHANNELDOWN" mapto="decUphop" flags="m"/>
 	</map>
-	<map context="InfoBarINFOpanel">
-		<key id="KEY_RED" mapto="infoPanel" flags="b" />
-		<key id="KEY_RED" mapto="softcamPanel" flags="l" />
-	</map>
 
 	<map context="DVDPlayerActions">
 		<key id="KEY_MENU" mapto="dvdMenu" flags="m"/>
@@ -1131,6 +1125,10 @@
 		<key id="KEY_VOD" mapto="vod_long" flags="l" />
 		<key id="KEY_KEYBOARD" mapto="keyboard" flags="b" />
 		<key id="KEY_KEYBOARD" mapto="keyboard_long" flags="l" />
+		<key id="KEY_MP3" mapto="youtube" flags="b" />
+		<key id="KEY_MP3" mapto="youtube_long" flags="l" />
+		<key id="KEY_PLAYER" mapto="kodi" flags="b" />
+		<key id="KEY_PLAYER" mapto="kodi_long" flags="l" />
 	</map>
 	<map context="SubtitlesActions">
 		<key id="KEY_SUBTITLE" mapto="subtitles" flags="m" />

@@ -21,13 +21,13 @@ import os
 
 def getButtonSetupKeys():
 	return [(_("Red"), "red", ""),
-		(_("Red long"), "red_long", ""),
+		(_("RED long"), "red_long", ""),
 		(_("Green"), "green", ""),
-		(_("Green long"), "green_long", ""),
+		(_("GREEN long"), "green_long", ""),
 		(_("Yellow"), "yellow", ""),
-		(_("Yellow long"), "yellow_long", ""),
+		(_("YELLOW long"), "yellow_long", ""),
 		(_("Blue"), "blue", ""),
-		(_("Blue long"), "blue_long", ""),
+		(_("BLUE long"), "blue_long", ""),
 		(_("Info (EPG)"), "info", "Infobar/InfoPressed/1"),
 		(_("Info (EPG) Long"), "info_long", "Infobar/showEventInfoPlugins/1"),
 		(_("Epg/Guide"), "epg", "Infobar/EPGPressed/1"),
@@ -47,8 +47,8 @@ def getButtonSetupKeys():
 		(_("EJECTCD"), "ejectcd", ""),
 		(_("EJECTCD long"), "ejectcd_long", ""),
 		(_("TV"), "showTv", ""),
-		(_("Radio"), "radio", ""),
-		(_("Radio long"), "radio_long", ""),
+		(_("RADIO"), "radio", ""),
+		(_("RADIO long"), "radio_long", ""),
 		(_("Rec"), "rec", ""),
 		(_("Rec long"), "rec_long", ""),
 		(_("Teletext"), "text", ""),
@@ -151,6 +151,10 @@ def getButtonSetupKeys():
 		(_("VOD long"), "vod_long", ""),
 		(_("Keyboard"), "keyboard", ""),
 		(_("Keyboard long"), "keyboard_long", ""),
+		(_("Kodi"), "kodi", ""),
+		(_("Kodi long"), "kodi_long", ""),
+		(_("YouTube"), "youtube", ""),
+		(_("YouTube long"), "youtube_long", ""),
 		(_("ZOOM"), "zoom", ""),
 		(_("ZOOM long"), "zoom_long", "")]
 
@@ -187,7 +191,7 @@ def getButtonSetupFunctions():
 			twinPlugins.append(plugin.name)
 	ButtonSetupFunctions.append((_("Show vertical Program Guide"), "Infobar/openVerticalEPG", "EPG"))
 	ButtonSetupFunctions.append((_("Show graphical multi EPG"), "Infobar/openGraphEPG", "EPG"))
-	ButtonSetupFunctions.append((_("Main menu"), "Infobar/mainMenu", "InfoBar"))
+	ButtonSetupFunctions.append((_("Main Menu"), "Infobar/mainMenu", "InfoBar"))
 	ButtonSetupFunctions.append((_("Show help"), "Infobar/showHelp", "InfoBar"))
 	ButtonSetupFunctions.append((_("Show extension selection"), "Infobar/showExtensionSelection", "InfoBar"))
 	ButtonSetupFunctions.append((_("Zap down"), "Infobar/zapDown", "InfoBar"))
@@ -228,6 +232,7 @@ def getButtonSetupFunctions():
 		ButtonSetupFunctions.append((_("Swap PIP"), "Infobar/swapPiP", "InfoBar"))
 		ButtonSetupFunctions.append((_("Move PIP"), "Infobar/movePiP", "InfoBar"))
 		ButtonSetupFunctions.append((_("Toggle PIPzap"), "Infobar/togglePipzap", "InfoBar"))
+		ButtonSetupFunctions.append((_("Cycle PIP(zap)"), "Infobar/activePiP", "InfoBar"))
 	ButtonSetupFunctions.append((_("Activate HbbTV (Redbutton)"), "Infobar/activateRedButton", "InfoBar"))
 	if getHaveHDMIinHD() == 'True' or getHaveHDMIinFHD() == 'True':
 		ButtonSetupFunctions.append((_("Toggle HDMI-In full screen"), "Infobar/HDMIInFull", "InfoBar"))
@@ -235,9 +240,9 @@ def getButtonSetupFunctions():
 	if BoxInfo.getItem("LcdLiveTV"):
 		ButtonSetupFunctions.append((_("Toggle LCD LiveTV"), "Infobar/ToggleLCDLiveTV", "InfoBar"))
 	if BoxInfo.getItem("canMultiBoot"):
-		ButtonSetupFunctions.append((_("Multiboot Image Selector"), "Module/Screens.MultiBootSelector/MultiBootSelector", "InfoBar"))
-	ButtonSetupFunctions.append((_("Hotkey Setup"), "Module/Screens.ButtonSetup/ButtonSetup", "Setup"))
-	ButtonSetupFunctions.append((_("Software update"), "Module/Screens.SoftwareUpdate/UpdatePlugin", "Setup"))
+		ButtonSetupFunctions.append((_("MultiBoot Manager"), "Module/Screens.MultiBootManager/MultiBootManager", "InfoBar"))
+	ButtonSetupFunctions.append((_("Hotkey Settings"), "Module/Screens.ButtonSetup/ButtonSetup", "Setup"))
+	ButtonSetupFunctions.append((_("Software Update"), "Module/Screens.SoftwareUpdate/SoftwareUpdate", "Setup"))
 	if getHaveCI() == 'True':
 		ButtonSetupFunctions.append((_("CI (Common Interface) Setup"), "Module/Screens.Ci/CiSelection", "Setup"))
 	ButtonSetupFunctions.append((_("Videosetup"), "Module/Screens.VideoMode/VideoSetup", "Setup"))
@@ -246,7 +251,7 @@ def getButtonSetupFunctions():
 	ButtonSetupFunctions.append((_("Automatic Scan"), "Module/Screens.ScanSetup/ScanSimple", "Scanning"))
 	for plugin in plugins.getPluginsForMenu("scan"):
 		ButtonSetupFunctions.append((plugin[0], "MenuPlugin/scan/" + plugin[2], "Scanning"))
-	ButtonSetupFunctions.append((_("Network setup"), "Module/Screens.NetworkSetup/NetworkAdapterSelection", "Setup"))
+	ButtonSetupFunctions.append((_("Network Settings"), "Module/Screens.NetworkSetup/NetworkAdapterSelection", "Setup"))
 	ButtonSetupFunctions.append((_("Network menu"), "Infobar/showNetworkMounts", "Setup"))
 	ButtonSetupFunctions.append((_("VPN"), "Module/Screens.NetworkSetup/NetworkOpenvpn", "Setup"))
 	ButtonSetupFunctions.append((_("Plugin Browser"), "Module/Screens.PluginBrowser/PluginBrowser", "Setup"))
@@ -262,14 +267,14 @@ def getButtonSetupFunctions():
 	ButtonSetupFunctions.append((_("Standby"), "Module/Screens.Standby/Standby", "Power"))
 	ButtonSetupFunctions.append((_("Restart"), "Module/Screens.Standby/TryQuitMainloop/2", "Power"))
 	ButtonSetupFunctions.append((_("Restart enigma"), "Module/Screens.Standby/TryQuitMainloop/3", "Power"))
-	ButtonSetupFunctions.append((_("Deep standby"), "Module/Screens.Standby/TryQuitMainloop/1", "Power"))
-	ButtonSetupFunctions.append((_("SleepTimer"), "Module/Screens.SleepTimerEdit/SleepTimerEdit", "Power"))
+	ButtonSetupFunctions.append((_("Deep Standby"), "Module/Screens.Standby/TryQuitMainloop/1", "Power"))
+	ButtonSetupFunctions.append((_("SleepTimer"), "Module/Screens.SleepTimer/SleepTimer", "Power"))
 	ButtonSetupFunctions.append((_("PowerTimer"), "Module/Screens.PowerTimerEdit/PowerTimerEditList", "Power"))
-	ButtonSetupFunctions.append((_("Usage Setup"), "Setup/usage", "Setup"))
-	ButtonSetupFunctions.append((_("User interface settings"), "Setup/userinterface", "Setup"))
-	ButtonSetupFunctions.append((_("Recording Setup"), "Setup/recording", "Setup"))
-	ButtonSetupFunctions.append((_("Harddisk Setup"), "Setup/harddisk", "Setup"))
-	ButtonSetupFunctions.append((_("Subtitles Settings"), "Setup/subtitlesetup", "Setup"))
+	ButtonSetupFunctions.append((_("Usage Setup"), "Setup/Usage", "Setup"))
+	ButtonSetupFunctions.append((_("User interface settings"), "Setup/UserInterface", "Setup"))
+	ButtonSetupFunctions.append((_("Recording Setup"), "Setup/Recording", "Setup"))
+	ButtonSetupFunctions.append((_("Harddisk Setup"), "Setup/HardDisk", "Setup"))
+	ButtonSetupFunctions.append((_("Subtitles Settings"), "Setup/Subtitle", "Setup"))
 	ButtonSetupFunctions.append((_("Language"), "Module/Screens.LocaleSelection/LocaleSelection", "Setup"))
 	ButtonSetupFunctions.append((_("OscamInfo Mainmenu"), "Module/Screens.OScamInfo/OscamInfoMenu", "Plugins"))
 	ButtonSetupFunctions.append((_("CCcamInfo Mainmenu"), "Module/Screens.CCcamInfo/CCcamInfoMain", "Plugins"))
@@ -282,10 +287,8 @@ def getButtonSetupFunctions():
 		for x in [x for x in os.listdir("/usr/script") if x.endswith(".sh")]:
 			x = x[:-3]
 			ButtonSetupFunctions.append((_("Shellscript") + " " + x, "Shellscript/" + x, "Shellscripts"))
-	if isPluginInstalled("Infopanel", "ScriptRunner"):
-		ButtonSetupFunctions.append((_("ScriptRunner"), "ScriptRunner/", "Plugins"))
-	if isPluginInstalled("Infopanel", "QuickMenu"):
-		ButtonSetupFunctions.append((_("QuickMenu"), "QuickMenu/", "Plugins"))
+	ButtonSetupFunctions.append((_("ScriptRunner"), "Module/Screens.ScriptRunner/ScriptRunner", "Plugins"))
+	ButtonSetupFunctions.append((_("QuickMenu"), "Module/Screens.QuickMenu/QuickMenu", "Plugins"))
 	if isPluginInstalled("Kodi"):
 		ButtonSetupFunctions.append((_("Kodi MediaCenter"), "Kodi/", "Plugins"))
 	if isPluginInstalled("BluetoothSetup"):
@@ -298,14 +301,14 @@ def getButtonSetupFunctions():
 class ButtonSetup(Screen):
 	def __init__(self, session, args=None):
 		Screen.__init__(self, session)
-		self['description'] = Label(_('Click on your remote on the button you want to change'))
-		self.setTitle(_("Hotkey Setup"))
+		self["description"] = Label(_("Click on your remote on the button you want to change"))
+		self.setTitle(_("Hotkey Settings"))
 		self["key_red"] = Button(_("Exit"))
 		self.list = []
 		self.ButtonSetupKeys = getButtonSetupKeys()
 		self.ButtonSetupFunctions = getButtonSetupFunctions()
 		for x in self.ButtonSetupKeys:
-			self.list.append(ChoiceEntryComponent('', (_(x[0]), x[1])))
+			self.list.append(ChoiceEntryComponent("dummy", (_(x[0]), x[1])))
 		self["list"] = ChoiceList(list=self.list[:config.misc.ButtonSetup.additional_keys.value and len(self.ButtonSetupKeys) or 10], selection=0)
 		self["choosen"] = ChoiceList(list=[])
 		self.getFunctions()
@@ -358,7 +361,7 @@ class ButtonSetup(Screen):
 			for x in eval("config.misc.ButtonSetup." + key + ".value.split(',')"):
 				function = list(function for function in self.ButtonSetupFunctions if function[1] == x)
 				if function:
-					selected.append(ChoiceEntryComponent('', ((function[0][0]), function[0][1])))
+					selected.append(ChoiceEntryComponent('dummy', ((function[0][0]), function[0][1])))
 			self["choosen"].setList(selected)
 
 
@@ -379,7 +382,7 @@ class ButtonSetupSelect(Screen):
 		for x in self.config.value.split(','):
 			function = list(function for function in self.ButtonSetupFunctions if function[1] == x)
 			if function:
-				self.selected.append(ChoiceEntryComponent('', ((function[0][0]), function[0][1])))
+				self.selected.append(ChoiceEntryComponent('dummy', ((function[0][0]), function[0][1])))
 		self.prevselected = self.selected[:]
 		self["choosen"] = ChoiceList(list=self.selected, selection=0)
 		self["list"] = ChoiceList(list=self.getFunctionList(), selection=0)
@@ -626,10 +629,11 @@ class InfoBarButtonSetup():
 					return 0
 			elif selected[0] == "Module":
 				try:
-					exec("from %s import %s" % (selected[1], selected[2]))
-					exec("self.session.open(%s)" % ",".join(selected[2:]))
+					exec("from %s import %s;self.session.open(%s)" % (selected[1], selected[2], ",".join(selected[2:])))
 				except:
 					print("[ButtonSetup] error during executing module %s, screen %s" % (selected[1], selected[2]))
+					import traceback
+					traceback.print_exc()
 			elif selected[0] == "Setup":
 				from Screens.Setup import Setup
 				exec("self.session.open(Setup, \"%s\")" % selected[1])
@@ -669,13 +673,11 @@ class InfoBarButtonSetup():
 				except Exception as e:
 					print('[EMCPlayer] showMovies exception:\n' + str(e))
 			elif selected[0] == "ScriptRunner":
-				if isPluginInstalled("Infopanel", "ScriptRunner"):
-					from Plugins.Extensions.Infopanel.ScriptRunner import ScriptRunner
-					self.session.open(ScriptRunner)
+				from Screens.ScriptRunner import ScriptRunner
+				self.session.open(ScriptRunner)
 			elif selected[0] == "QuickMenu":
-				if isPluginInstalled("Infopanel", "QuickMenu"):
-					from Plugins.Extensions.Infopanel.QuickMenu import QuickMenu
-					self.session.open(QuickMenu)
+				from Screens.QuickMenu import QuickMenu
+				self.session.open(QuickMenu)
 			elif selected[0] == "Kodi":
 				if isPluginInstalled("Kodi"):
 					from Plugins.Extensions.Kodi.plugin import KodiMainScreen
