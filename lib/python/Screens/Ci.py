@@ -33,6 +33,8 @@ def setCIBitrate(configElement):
 	else:
 		eDVBCI_UI.getInstance().setClockRate(configElement.slotid, eDVBCI_UI.rateHigh)
 
+def setCIEnabled(configElement):
+    eDVBCI_UI.getInstance().setEnabled(configElement.slotid, configElement.value)
 
 def setdvbCiDelay(configElement):
 	f = open("/proc/stb/tsmux/rmx_delay", "w")
@@ -53,6 +55,9 @@ def InitCiConfig():
 	config.cimisc = ConfigSubsection()
 	for slot in list(range(MAX_NUM_CI)):
 		config.ci.append(ConfigSubsection())
+		config.ci[slot].enabled = ConfigYesNo(default=True)
+		config.ci[slot].enabled.slotid = slot
+		config.ci[slot].enabled.addNotifier(setCIEnabled)
 		config.ci[slot].canDescrambleMultipleServices = ConfigSelection(choices=[("auto", _("Auto")), ("no", _("No")), ("yes", _("Yes"))], default="auto")
 		config.ci[slot].use_static_pin = ConfigYesNo(default=True)
 		config.ci[slot].static_pin = ConfigPIN(default=0)
@@ -98,7 +103,7 @@ class CISetup(Screen, ConfigListScreen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
 		self.skinName = ["Setup"]
-		self.setTitle(_("CI Basic settings"))
+		self.setTitle(_("CI Basic Settings"))
 		self["HelpWindow"] = Pixmap()
 		self["HelpWindow"].hide()
 		self["VKeyIcon"] = Boolean(False)
@@ -229,10 +234,10 @@ class MMIDialog(Screen):
 			pinlength = entry[1]
 			if entry[3] == 1:
 				# masked pins:
-				x = ConfigPIN(0, pinlength=pinlength, censor="*")
+				x = ConfigPIN(0, pinLength=pinlength, censor="*")
 			else:
 				# unmasked pins:
-				x = ConfigPIN(0, pinlength=pinlength)
+				x = ConfigPIN(0, pinLength=pinlength)
 			self["subtitle"].setText(entry[2])
 			list.append(getConfigListEntry("", x))
 			self["bottom"].setText(_("please press OK when ready"))
@@ -561,6 +566,9 @@ class CiSelection(Screen):
 		self.list = []
 		self.entryData = []
 		for slot in self.slots:
+			self.addToList(getConfigListEntry(_("CI %s enabled" % slot), config.ci[slot].enabled), -1, slot)
+			if self.state[slot] == 3:  # module disabled by the user
+				continue
 			self.addToList((_("Reset"), ConfigNothing()), 0, slot)
 			self.addToList((_("Init"), ConfigNothing()), 1, slot)
 
@@ -699,7 +707,7 @@ class PermanentPinEntry(Screen, ConfigListScreen):
 class CIHelper(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("CIHelper Setup"))
+		Screen.setTitle(self, _("CI Helper Settings"))
 		self.skinName = "CIHelper"
 		self.onChangedEntry = []
 		self['ci0'] = Label(_("CIHelper for SLOT CI0"))
@@ -797,7 +805,7 @@ class CIHelper(Screen):
 					self['ci1inactive'].hide()
 					self['ci1'].hide()
 				f.close()
-		title = _("CIHelper Setup")
+		title = _("CI Helper Settings")
 
 		for cb in self.onChangedEntry:
 			cb(title, status_summary, autostartstatus_summary)
@@ -809,11 +817,11 @@ class CIHelper(Screen):
 class CIHelperSetup(Screen, ConfigListScreen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("CIHelper Setup"))
+		Screen.setTitle(self, _("CI Helper Settings"))
 		self.onChangedEntry = []
 		self.list = []
 		ConfigListScreen.__init__(self, self.list, session=session, on_change=self.selectionChanged)
-		Screen.setTitle(self, _("CIHelper Setup"))
+		Screen.setTitle(self, _("CI Helper Settings"))
 		self['key_red'] = Label(_("Save"))
 		self['actions'] = ActionMap(['WizardActions', 'ColorActions'], {'red': self.saveCIHelper, 'back': self.close})
 		self.updateList()

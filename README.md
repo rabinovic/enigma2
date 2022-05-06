@@ -4,6 +4,16 @@
 
 [![Build status](https://travis-ci.org/openatv/enigma2.svg?branch=7.0)](https://travis-ci.org/openatv/enigma2) [![enigma2 build](https://github.com/openatv/enigma2/actions/workflows/enigma2.yml/badge.svg)](https://github.com/openatv/enigma2/actions/workflows/enigma2.yml)
 
+[Active Build Status](http://images.mynonpublic.com/openatv/build_status_mipsel_6.html "Active Build Status") - shows which box is currently being built 
+
+## SonarCloud status
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=openatv_enigma2&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=openatv_enigma2)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=openatv_enigma2&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=openatv_enigma2)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=openatv_enigma2&metric=bugs)](https://sonarcloud.io/summary/new_code?id=openatv_enigma2)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=openatv_enigma2&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=openatv_enigma2)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=openatv_enigma2&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=openatv_enigma2)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=openatv_enigma2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=openatv_enigma2)
+
 ## Translation status
 
 [![Translation status](https://hosted.weblate.org/widgets/openatv/-/enigma2-7-0-po/open-graph.png)](https://hosted.weblate.org/engage/openatv/)
@@ -31,12 +41,16 @@
 * [MetrixHD](https://github.com/openatv/MetrixHD/tree/dev "openATV Skin") - Default openATV skin
 * ...
 
+## DOXYGEN Documentation
+
+* [openATV enigma2](http://doxy.mynonpublic.com/ "openATV enigma2") -  openATV core
+
 # Build instructions
 
 1. Install required packages
 
     ```sh
-    sudo apt-get install -y autoconf automake bison bzip2 chrpath coreutils cpio curl cvs debianutils default-jre default-jre-headless diffstat flex g++ gawk gcc gcc-8 gcc-multilib g++-multilib gettext git git-core gzip help2man info iputils-ping java-common libc6-dev libegl1-mesa libglib2.0-dev libncurses5-dev libperl4-corelibs-perl libproc-processtable-perl libsdl1.2-dev libserf-dev libtool libxml2-utils make ncurses-bin patch perl pkg-config psmisc python3 python3-git python3-jinja2 python3-pexpect python3-pip python-setuptools qemu quilt socat sshpass subversion tar texi2html texinfo unzip wget xsltproc xterm xz-utils zip zlib1g-dev zstd
+    sudo apt-get install -y autoconf automake bison bzip2 chrpath coreutils cpio curl cvs debianutils default-jre default-jre-headless diffstat flex g++ gawk gcc gcc-8 gcc-multilib g++-multilib gettext git git-core gzip help2man info iputils-ping java-common libc6-dev libegl1-mesa libglib2.0-dev libncurses5-dev libperl4-corelibs-perl libproc-processtable-perl libsdl1.2-dev libserf-dev libtool libxml2-utils make ncurses-bin patch perl pkg-config psmisc python3 python3-git python3-jinja2 python3-pexpect python3-pip python-setuptools qemu quilt socat sshpass subversion tar texi2html texinfo unzip wget xsltproc xterm xz-utils zip zlib1g-dev zstd fakeroot
     ```
 
 1. Set `python3` as preferred provider for `python`

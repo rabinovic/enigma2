@@ -28,34 +28,6 @@ import six
 from Tools.BugHunting import printCallSequence
 
 
-def setForceLNBPowerChanged(configElement):
-	f = open("/proc/stb/frontend/fbc/force_lnbon", "w")
-	if configElement.value:
-		f.write("on")
-	else:
-		f.write("off")
-	f.close()
-
-
-def setForceToneBurstChanged(configElement):
-	f = open("/proc/stb/frontend/fbc/force_toneburst", "w")
-	if configElement.value:
-		f.write("enable")
-	else:
-		f.write("disable")
-	f.close()
-
-
-config.tunermisc = ConfigSubsection()
-if BoxInfo.getItem("ForceLNBPowerChanged"):
-	config.tunermisc.forceLnbPower = ConfigYesNo(default=False)
-	config.tunermisc.forceLnbPower.addNotifier(setForceLNBPowerChanged)
-
-if BoxInfo.getItem("ForceToneBurstChanged"):
-	config.tunermisc.forceToneBurst = ConfigYesNo(default=False)
-	config.tunermisc.forceToneBurst.addNotifier(setForceToneBurstChanged)
-
-
 class ServiceStopScreen:
 	def __init__(self):
 		try:
@@ -781,8 +753,8 @@ class NimSetup(Screen, ConfigListScreen, ServiceStopScreen):
 	def __init__(self, session, slotid):
 		printCallSequence(10)
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("Tuner settings"))
-		self.setup_title = _("Tuner settings")
+		Screen.setTitle(self, _("Tuner Settings"))
+		self.setup_title = _("Tuner Settings")
 		self.list = []
 		ServiceStopScreen.__init__(self)
 		self.stopService()
@@ -952,7 +924,7 @@ class NimSetup(Screen, ConfigListScreen, ServiceStopScreen):
 class NimSelection(Screen):
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("Tuner configuration"))
+		Screen.setTitle(self, _("Tuner Configuration"))
 
 		self.list = [None] * nimmanager.getSlotCount()
 		self["nimlist"] = List(self.list)
@@ -1002,7 +974,14 @@ class NimSelection(Screen):
 		nim = self["nimlist"].getCurrent()
 		nim = nim and nim[3]
 		if config.usage.setup_level.index >= 2 and nim is not None:
-			text = _("Capabilities: ") + "\n" + ",".join(eDVBResourceManager.getInstance().getFrontendCapabilities(nim.slot).splitlines())
+			output = []
+			for value in eDVBResourceManager.getInstance().getFrontendCapabilities(nim.slot).splitlines():
+				kv = value.split(":")
+				if len(kv) == 2:
+					val = kv[1]
+					val = val[:-1] if val[-1] == "," else val
+					output.append("%s: %s" % (_(kv[0]), val))
+			text = "\n\n".join(output)
 			self.session.open(MessageBox, text, MessageBox.TYPE_INFO, simple=True)
 
 	def okbuttonClick(self):
@@ -1151,8 +1130,8 @@ class SelectSatsEntryScreen(Screen):
 			if isinstance(userSatlist, str) and str(sat[0]) in userSatlist:
 				selected = True
 			SatList.append((sat[0], sat[1], sat[2], selected))
-		sat_list = [SelectionEntryComponent(x[1], x[0], x[2], x[3]) for x in SatList]
 		self["list"] = SelectionList(enableWrapAround=True)
+		sat_list = [SelectionEntryComponent(x[1], x[0], x[2], x[3]) for x in SatList]
 		self["list"].setList(sat_list)
 		self["setupActions"] = ActionMap(["SetupActions", "ColorActions"],
 		{

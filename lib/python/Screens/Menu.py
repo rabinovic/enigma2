@@ -30,7 +30,7 @@ file = open(resolveFilename(SCOPE_SKINS, "menu.xml"), "r")
 mdom = parse(file)
 file.close()
 
-mainmenu = _("Main menu")
+mainmenu = _("Main Menu")
 lastMenuID = None
 
 nomainmenupath = False if exists(resolveFilename(SCOPE_GUISKIN, "mainmenu")) else True
@@ -132,7 +132,6 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 	def __init__(self, session, parent):
 		Screen.__init__(self, session)
 		HelpableScreen.__init__(self)
-		ProtectedScreen.__init__(self)
 		self.parentMenu = parent
 		self.menuList = []
 		self["menu"] = List(self.menuList)
@@ -146,6 +145,7 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 		self.selected_entry = None
 		self.sub_menu_sort = None
 		self.createMenuList()
+		ProtectedScreen.__init__(self)
 		# for the skin: first try a menu_<menuID>, then Menu
 		self.skinName = []
 		if self.menuID is not None:
@@ -328,7 +328,7 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 			# Sort by Name
 			self.menuList.sort(key=self.sortByName)
 		elif config.usage.menu_sort_mode.value == "user":
-			self["blue"].setText(_("Edit mode on"))
+			self["blue"].setText(_("Edit Mode On"))
 			self.hide_show_entries()
 		else:
 			# Sort by Weight
@@ -346,9 +346,9 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 		if self.sort_mode:
 			selection = self["menu"].getCurrent()[2]
 			if self.sub_menu_sort.getConfigValue(selection, "hidden"):
-				self["yellow"].setText(_("show"))
+				self["yellow"].setText(_("Show"))
 			else:
-				self["yellow"].setText(_("hide"))
+				self["yellow"].setText(_("Hide"))
 		else:
 			self["yellow"].setText("")
 
@@ -512,7 +512,12 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 
 	def __onExecBegin(self):
 		self.onExecBegin.remove(self.__onExecBegin)
-		self.okbuttonClick()
+		if config.usage.menutype.value == "horzanim" and findSkinScreen("Animmain"):
+			return
+		elif config.usage.menutype.value == "horzicon" and findSkinScreen("Iconmain"):
+			return
+		else:
+			self.okbuttonClick()
 
 	def keyNumberGlobal(self, number):
 		self.number = self.number * 10 + number
@@ -605,10 +610,10 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 			elif self.selected_entry != m_entry[2]:
 				select = True
 			if not select:
-				self["green"].setText(_("Move mode on"))
+				self["green"].setText(_("Move Mode On"))
 				self.selected_entry = None
 			else:
-				self["green"].setText(_("Move mode off"))
+				self["green"].setText(_("Move Mode Off"))
 			idx = 0
 			for x in self.menuList:
 				if m_entry[2] == x[2] and select == True:
@@ -635,10 +640,10 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 			hidden = self.sub_menu_sort.getConfigValue(m_entry, "hidden") or 0
 			if hidden:
 				self.sub_menu_sort.removeConfigValue(m_entry, "hidden")
-				self["yellow"].setText(_("hide"))
+				self["yellow"].setText(_("Hide"))
 			else:
 				self.sub_menu_sort.changeConfigValue(m_entry, "hidden", 1)
-				self["yellow"].setText(_("show"))
+				self["yellow"].setText(_("Show"))
 
 	def keyGreen(self):
 		if self.sort_mode:
@@ -659,7 +664,7 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 		if self.sort_mode:
 			self["green"].setText("")
 			self["yellow"].setText("")
-			self["blue"].setText(_("Edit mode on"))
+			self["blue"].setText(_("Edit Mode On"))
 			self.sort_mode = False
 			i = 10
 			idx = 0
@@ -682,8 +687,8 @@ class Menu(Screen, HelpableScreen, ProtectedScreen):
 			self.hide_show_entries()
 			self["menu"].setList(self.menuList)
 		else:
-			self["green"].setText(_("Move mode on"))
-			self["blue"].setText(_("Edit mode off"))
+			self["green"].setText(_("Move Mode On"))
+			self["blue"].setText(_("Edit Mode Off"))
 			self.sort_mode = True
 			self.hide_show_entries()
 			self["menu"].updateList(self.menuList)

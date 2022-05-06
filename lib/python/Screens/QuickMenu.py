@@ -1,93 +1,61 @@
-from __future__ import print_function, division
 
-from enigma import eListboxPythonMultiContent, gFont, eEnv, pNavigation
+
+from re import search
+from os.path import exists, realpath, isdir
+from skin import getSkinFactor
+from time import sleep
+
 from boxbranding import getMachineBrand, getMachineName, getBrandOEM
+from enigma import eListboxPythonMultiContent, gFont, eEnv, pNavigation, BT_SCALE
+
 from Components.ActionMap import ActionMap
 from Components.Label import Label
-from Components.Sources.StaticText import StaticText
 from Components.MenuList import MenuList
 from Components.MultiContent import MultiContentEntryText, MultiContentEntryPixmapAlphaBlend
 from Components.Network import iNetwork
 from Components.NimManager import nimmanager
+from Components.Sources.StaticText import StaticText
 from Components.SystemInfo import BoxInfo
-
-from Screens.Screen import Screen
-from Screens.SoftcamSetup import *
-from Screens.ParentalControlSetup import ProtectedScreen
-from Screens.NetworkSetup import *
-from Screens.About import About
-from Screens.PluginBrowser import PluginDownloadBrowser, PluginFilter, PluginBrowser
-from Screens.Satconfig import NimSelection
-from Screens.ScanSetup import ScanSimple, ScanSetup
-from Screens.Setup import Setup
-from Screens.HarddiskSetup import HarddiskSelection, HarddiskFsckSelection, HarddiskConvertExt4Selection
-from Screens.SkinSelector import LcdSkinSelector, SkinSelector
-from Screens.VideoMode import VideoSetup
-
-from Plugins.SystemPlugins.NetworkWizard.NetworkWizard import NetworkWizard
-from Plugins.Extensions.Infopanel.RestartNetwork import RestartNetwork
-from Plugins.Extensions.Infopanel.MountManager import HddMount
-from Plugins.Extensions.Infopanel.SoftcamPanel import *
-from Plugins.Extensions.Infopanel.SoftwarePanel import SoftwarePanel
-from Plugins.SystemPlugins.SoftwareManager.Flash_online import FlashOnline
-from Plugins.SystemPlugins.SoftwareManager.ImageBackup import ImageBackup
-from Plugins.SystemPlugins.SoftwareManager.plugin import SoftwareManagerSetup, Load_defaults
-from Plugins.SystemPlugins.SoftwareManager.BackupRestore import BackupScreen, RestoreScreen, BackupSelection, getBackupPath, getOldBackupPath, getBackupFilename
-
-from Tools.LoadPixmap import LoadPixmap
-
-from os import path
-from time import sleep
-from re import search
-from skin import getSkinFactor
 
 import NavigationInstance
 
-if path.exists("/usr/lib/enigma2/python/Plugins/SystemPlugins/NetworkBrowser"):
-	from Plugins.SystemPlugins.NetworkBrowser.MountManager import AutoMountManager
-	from Plugins.SystemPlugins.NetworkBrowser.NetworkBrowser import NetworkBrowser
-	plugin_path_networkbrowser = eEnv.resolve("${libdir}/enigma2/python/Plugins/SystemPlugins/NetworkBrowser")
-	NETWORKBROWSER = True
-else:
-	NETWORKBROWSER = False
+from Plugins.SystemPlugins.SoftwareManager.BackupRestore import BackupScreen, RestoreScreen, BackupSelection, getBackupPath, getOldBackupPath, getBackupFilename
+from Plugins.SystemPlugins.SoftwareManager.plugin import SoftwareManagerSetup, Load_defaults
 
-if path.exists("/usr/lib/enigma2/python/Plugins/Extensions/AudioSync"):
-	from Plugins.Extensions.AudioSync.AC3setup import AC3LipSyncSetup
-	plugin_path_audiosync = eEnv.resolve("${libdir}/enigma2/python/Plugins/Extensions/AudioSync")
-	AUDIOSYNC = True
-else:
-	AUDIOSYNC = False
+from Screens.HarddiskSetup import HarddiskSelection, HarddiskFsckSelection, HarddiskConvertExt4Selection
+from Screens.MountManager import HddMount
+from Screens.NetworkSetup import *
+from Screens.OScamInfo import OscamInfoMenu
+from Screens.CCcamInfo import CCcamInfoMain
+from Screens.ParentalControlSetup import ProtectedScreen
+from Screens.PluginBrowser import PluginDownloadBrowser, PluginFilter, PluginBrowser
+from Screens.RestartNetwork import RestartNetwork
+from Screens.Satconfig import NimSelection
+from Screens.ScanSetup import ScanSimple, ScanSetup
+from Screens.Screen import Screen
+from Screens.ShowSoftcamPackages import ShowSoftcamPackages
+from Screens.Setup import Setup
+from Screens.SkinSelector import LcdSkinSelector, SkinSelector
+from Screens.SoftcamSetup import SoftcamSetup
+from Screens.VideoMode import VideoSetup
 
-if path.exists("/usr/lib/enigma2/python/Plugins/SystemPlugins/VideoEnhancement/plugin.py"):
-	from Plugins.SystemPlugins.VideoEnhancement.plugin import VideoEnhancementSetup
-	VIDEOENH = True
-else:
-	VIDEOENH = False
+from Tools.LoadPixmap import LoadPixmap
+from Tools.Directories import isPluginInstalled
 
-if path.exists("/usr/lib/enigma2/python/Plugins/Extensions/dFlash"):
-	from Plugins.Extensions.dFlash.plugin import dFlash
-	DFLASH = True
-else:
-	DFLASH = False
 
-if path.exists("/usr/lib/enigma2/python/Plugins/Extensions/dBackup"):
-	from Plugins.Extensions.dBackup.plugin import dBackup
-	DBACKUP = True
-else:
-	DBACKUP = False
+NETWORKBROWSER = isPluginInstalled("NetworkBrowser")
 
-if path.exists("/usr/lib/enigma2/python/Plugins/SystemPlugins/PositionerSetup/plugin.py"):
-	from Plugins.SystemPlugins.PositionerSetup.plugin import PositionerSetup, RotorNimSelection
-	POSSETUP = True
-else:
-	POSSETUP = False
+AUDIOSYNC = isPluginInstalled("AudioSync")
 
-if path.exists("/usr/lib/enigma2/python/Plugins/SystemPlugins/Satfinder/plugin.py"):
-	from Plugins.SystemPlugins.Satfinder.plugin import Satfinder
-	SATFINDER = True
-else:
-	SATFINDER = False
+VIDEOENH = isPluginInstalled("VideoEnhancement") and exists("/proc/stb/vmpeg/0/pep_apply")
 
+DFLASH = isPluginInstalled("dFlash")
+
+DBACKUP = isPluginInstalled("dBackup")
+
+POSSETUP = isPluginInstalled("PositionerSetup")
+
+SATFINDER = isPluginInstalled("Satfinder")
 
 def isFileSystemSupported(filesystem):
 	try:
@@ -96,7 +64,7 @@ def isFileSystemSupported(filesystem):
 				return True
 		return False
 	except Exception as ex:
-		print("[Harddisk] Failed to read /proc/filesystems:", ex)
+		print("[Harddisk] Failed to read /proc/filesystems: %s" % str(ex))
 
 
 class QuickMenu(Screen, ProtectedScreen):
@@ -141,10 +109,9 @@ class QuickMenu(Screen, ProtectedScreen):
 		self["list"].onSelectionChanged.append(self.selectionChanged)
 		self["sublist"].onSelectionChanged.append(self.selectionSubChanged)
 
-		self["actions"] = ActionMap(["SetupActions", "WizardActions", "MenuActions", "MoviePlayerActions"],
+		self["NavigationActions"] = ActionMap(["OkCancelActions", "NavigationActions"],
 		{
 			"ok": self.ok,
-			"back": self.keyred,
 			"cancel": self.keyred,
 			"left": self.goLeft,
 			"right": self.goRight,
@@ -216,7 +183,8 @@ class QuickMenu(Screen, ProtectedScreen):
 		self.close()
 
 	def keygreen(self):
-		self.session.open(About)
+		from Screens.Information import ImageInformation
+		self.session.open(ImageInformation)
 
 	def keyyellow(self):
 		self.session.open(QuickMenuDevices)
@@ -241,23 +209,24 @@ class QuickMenu(Screen, ProtectedScreen):
 ######## System Setup Menu ##############################
 	def Qsystem(self):
 		self.sublist = []
-		self.sublist.append(QuickSubMenuEntryComponent("Customise", _("Setup Enigma2"), _("Customise enigma2 personal settings")))
-		self.sublist.append(QuickSubMenuEntryComponent("OSD settings", _("OSD Setup"), _("Setup your OSD")))
+		self.sublist.append(QuickSubMenuEntryComponent("Customize", _("Setup Enigma2"), _("Customize enigma2 personal settings")))
+		self.sublist.append(QuickSubMenuEntryComponent("OSD Settings", _("OSD Setup"), _("Setup your OSD")))
 		self.sublist.append(QuickSubMenuEntryComponent("Button Setup", _("Button Setup"), _("Setup your remote buttons")))
 		if BoxInfo.getItem("FrontpanelDisplay") and BoxInfo.getItem("Display"):
 			self.sublist.append(QuickSubMenuEntryComponent("Display Settings", _("Display Setup"), _("Setup your display")))
 		if BoxInfo.getItem("LCDSKINSetup"):
-			self.sublist.append(QuickSubMenuEntryComponent("LCD Skin Setup", _("Select LCD Skin"), _("Setup your LCD")))
-		self.sublist.append(QuickSubMenuEntryComponent("Skin Setup", _("Select Enigma2 Skin"), _("Setup your Skin")))
+			self.sublist.append(QuickSubMenuEntryComponent("LCD Skin Settings", _("Select LCD Skin"), _("Setup your LCD")))
+		self.sublist.append(QuickSubMenuEntryComponent("Skin Settings", _("Select Enigma2 Skin"), _("Setup your Skin")))
 		self.sublist.append(QuickSubMenuEntryComponent("Channel selection", _("Channel selection configuration"), _("Setup your Channel selection configuration")))
-		self.sublist.append(QuickSubMenuEntryComponent("Recording settings", _("Recording Setup"), _("Setup your recording config")))
-		self.sublist.append(QuickSubMenuEntryComponent("EPG settings", _("EPG Setup"), _("Setup your EPG config")))
+		self.sublist.append(QuickSubMenuEntryComponent("Recording Settings", _("Recording Setup"), _("Setup your recording config")))
+		self.sublist.append(QuickSubMenuEntryComponent("EPG Settings", _("EPG Setup"), _("Setup your EPG config")))
 		self["sublist"].l.setList(self.sublist)
 
 ######## Network Menu ##############################
 	def Qnetwork(self):
 		self.sublist = []
-		self.sublist.append(QuickSubMenuEntryComponent("Network Wizard", _("Configure your Network"), _("Use the Networkwizard to configure your Network. The wizard will help you to setup your network")))
+		if isPluginInstalled("NetworkWizard"):
+			self.sublist.append(QuickSubMenuEntryComponent("Network Wizard", _("Configure your Network"), _("Use the Networkwizard to configure your Network. The wizard will help you to setup your network")))
 		if len(self.adapters) > 1: # show only adapter selection if more as 1 adapter is installed
 			self.sublist.append(QuickSubMenuEntryComponent("Network Adapter Selection", _("Select Lan/Wlan"), _("Setup your network interface. If no Wlan stick is used, you only can select Lan")))
 		if not self.activeInterface == None: # show only if there is already a adapter up
@@ -285,7 +254,7 @@ class QuickMenu(Screen, ProtectedScreen):
 ######## Mount Settings Menu ##############################
 	def Qmount(self):
 		self.sublist = []
-		if NETWORKBROWSER == True:
+		if NETWORKBROWSER:
 			self.sublist.append(QuickSubMenuEntryComponent("Mount Manager", _("Manage network mounts"), _("Setup your network mounts")))
 			self.sublist.append(QuickSubMenuEntryComponent("Network Browser", _("Search for network shares"), _("Search for network shares")))
 		self.sublist.append(QuickSubMenuEntryComponent("Device Manager", _("Mounts Devices"), _("Setup your Device mounts (USB, HDD, others...)")))
@@ -295,7 +264,11 @@ class QuickMenu(Screen, ProtectedScreen):
 	def Qsoftcam(self):
 		self.sublist = []
 		if BoxInfo.getItem("SoftCam"): # show only when there is a softcam installed
-			self.sublist.append(QuickSubMenuEntryComponent("Softcam Setup", _("Control your Softcams"), _("Use the Softcam Panel to control your Cam. This let you start/stop/select a cam")))
+			self.sublist.append(QuickSubMenuEntryComponent("Softcam Settings", _("Control your Softcams"), _("Use the Softcam Panel to control your Cam. This let you start/stop/select a cam")))
+			if BoxInfo.getItem("ShowOscamInfo"): # show only when oscam or ncam is active
+				self.sublist.append(QuickSubMenuEntryComponent("OScam Information", _("Show OScam Info"), _("Show the OScamInfo Screen")))
+			if BoxInfo.getItem("ShowCCCamInfo"): # show only when CCcam is active
+				self.sublist.append(QuickSubMenuEntryComponent("CCcam Information", _("Show CCcam Info"), _("Show the CCcam Info Screen")))
 		self.sublist.append(QuickSubMenuEntryComponent("Download Softcams", _("Download and install cam"), _("Shows available softcams. Here you can download and install them")))
 		self["sublist"].l.setList(self.sublist)
 
@@ -304,10 +277,10 @@ class QuickMenu(Screen, ProtectedScreen):
 		self.sublist = []
 		self.sublist.append(QuickSubMenuEntryComponent("Video Settings", _("Setup Videomode"), _("Setup your Video Mode, Video Output and other Video Settings")))
 		self.sublist.append(QuickSubMenuEntryComponent("Audio Settings", _("Setup Audiomode"), _("Setup your Audio Mode")))
-		if AUDIOSYNC == True:
+		if AUDIOSYNC:
 			self.sublist.append(QuickSubMenuEntryComponent("Audio Sync", _("Setup Audio Sync"), _("Setup Audio Sync settings")))
 		self.sublist.append(QuickSubMenuEntryComponent("Auto Language", _("Auto Language Selection"), _("Select your Language for Audio/Subtitles")))
-		if os_path.exists("/proc/stb/vmpeg/0/pep_apply") and VIDEOENH == True:
+		if VIDEOENH:
 			self.sublist.append(QuickSubMenuEntryComponent("VideoEnhancement", _("VideoEnhancement Setup"), _("VideoEnhancement Setup")))
 
 		self["sublist"].l.setList(self.sublist)
@@ -316,11 +289,11 @@ class QuickMenu(Screen, ProtectedScreen):
 	def Qtuner(self):
 		self.sublist = []
 		self.sublist.append(QuickSubMenuEntryComponent("Tuner Configuration", _("Setup tuner(s)"), _("Setup each tuner for your satellite system")))
-		if POSSETUP == True:
+		if POSSETUP:
 			self.sublist.append(QuickSubMenuEntryComponent("Positioner Setup", _("Setup rotor"), _("Setup your positioner for your satellite system")))
 		self.sublist.append(QuickSubMenuEntryComponent("Automatic Scan", _("Automatic Service Searching"), _("Automatic scan for services")))
 		self.sublist.append(QuickSubMenuEntryComponent("Manual Scan", _("Manual Service Searching"), _("Manual scan for services")))
-		if SATFINDER == True:
+		if SATFINDER:
 			self.sublist.append(QuickSubMenuEntryComponent("Sat Finder", _("Search Sats"), _("Search Sats, check signal and lock")))
 		self["sublist"].l.setList(self.sublist)
 
@@ -329,7 +302,7 @@ class QuickMenu(Screen, ProtectedScreen):
 		model = BoxInfo.getItem("model")
 		self.sublist = []
 		self.sublist.append(QuickSubMenuEntryComponent("Software Update", _("Online software update"), _("Check/Install online updates (you must have a working internet connection)")))
-		if not model.startswith('az') and not model in ('dm500hd', 'dm500hdv2', 'dm520', 'dm800', 'dm800se', 'dm800sev2', 'dm820', 'dm7020hd', 'dm7020hdv2', 'dm7080', 'dm8000') and not getBrandOEM().startswith('cube') and not getBrandOEM().startswith('wetek') and not model.startswith('alien'):
+		if not model.startswith('az') and not getBrandOEM().startswith('cube') and not getBrandOEM().startswith('wetek') and not model.startswith('alien'):
 			self.sublist.append(QuickSubMenuEntryComponent("Flash Online", _("Flash Online a new image"), _("Flash on the fly your your Receiver software.")))
 		if not model.startswith('az') and not getBrandOEM().startswith('cube') and not getBrandOEM().startswith('wetek') and not model.startswith('alien'):
 			self.sublist.append(QuickSubMenuEntryComponent("Complete Backup", _("Backup your current image"), _("Backup your current image to HDD or USB. This will make a 1:1 copy of your box")))
@@ -347,7 +320,7 @@ class QuickMenu(Screen, ProtectedScreen):
 		self.sublist.append(QuickSubMenuEntryComponent("Plugin Browser", _("Open the Plugin Browser"), _("Shows Plugins Browser. Here you can setup installed Plugin")))
 		self.sublist.append(QuickSubMenuEntryComponent("Download Plugins", _("Download and install Plugins"), _("Shows available plugins. Here you can download and install them")))
 		self.sublist.append(QuickSubMenuEntryComponent("Remove Plugins", _("Delete Plugins"), _("Delete and uninstall Plugins. This will remove the Plugin from your box")))
-		self.sublist.append(QuickSubMenuEntryComponent("Plugin Filter", _("Setup Plugin filter"), _("Setup Plugin filter. Here you can select which Plugins are showed in the PluginBrowser")))
+		self.sublist.append(QuickSubMenuEntryComponent("Plugin Filter Settings", _("Setup Plugin filter"), _("Setup Plugin filter. Here you can select which Plugins are showed in the PluginBrowser")))
 		self.sublist.append(QuickSubMenuEntryComponent("IPK Installer", _("Install local extension"), _("Scan for local extensions and install them")))
 		self["sublist"].l.setList(self.sublist)
 
@@ -356,7 +329,7 @@ class QuickMenu(Screen, ProtectedScreen):
 		self.sublist = []
 		self.sublist.append(QuickSubMenuEntryComponent("Harddisk Setup", _("Harddisk Setup"), _("Setup your Harddisk")))
 		self.sublist.append(QuickSubMenuEntryComponent("Initialization", _("Format HDD"), _("Format your Harddisk")))
-		self.sublist.append(QuickSubMenuEntryComponent("Filesystem Check", _("Check HDD"), _("Filesystem check your Harddisk")))
+		self.sublist.append(QuickSubMenuEntryComponent("File System Check", _("Check HDD"), _("Filesystem check your Harddisk")))
 		if isFileSystemSupported("ext4"):
 			self.sublist.append(QuickSubMenuEntryComponent("Convert ext3 to ext4", _("Convert filesystem ext3 to ext4"), _("Convert filesystem ext3 to ext4")))
 		self["sublist"].l.setList(self.sublist)
@@ -416,6 +389,7 @@ class QuickMenu(Screen, ProtectedScreen):
 
 ######## Select Network Menu ##############################
 		if item[0] == _("Network Wizard"):
+			from Plugins.SystemPlugins.NetworkWizard.NetworkWizard import NetworkWizard
 			self.session.open(NetworkWizard)
 		elif item[0] == _("Network Adapter Selection"):
 			self.session.open(NetworkAdapterSelection)
@@ -449,46 +423,57 @@ class QuickMenu(Screen, ProtectedScreen):
 		elif item[0] == _("Telnet"):
 			self.session.open(NetworkTelnet)
 ######## Select System Setup Menu ##############################
-		elif item[0] == _("Customise"):
-			self.openSetup("usage")
+		elif item[0] == _("Customize"):
+			self.openSetup("Usage")
 		elif item[0] == _("Button Setup"):
-			self.openSetup("remotesetup")
+			self.openSetup("RemoteButton")
 		elif item[0] == _("Display Settings"):
-			self.openSetup("display")
-		elif item[0] == _("LCD Skin Setup"):
+			self.openSetup("Display")
+		elif item[0] == _("LCD Skin Settings"):
 			self.session.open(LcdSkinSelector)
-		elif item[0] == _("Skin Setup"):
+		elif item[0] == _("Skin Settings"):
 			self.session.open(SkinSelector)
-		elif item[0] == _("OSD settings"):
-			self.openSetup("userinterface")
+		elif item[0] == _("OSD Settings"):
+			self.openSetup("UserInterface")
 		elif item[0] == _("Channel selection"):
-			self.openSetup("channelselection")
-		elif item[0] == _("Recording settings"):
-			self.openSetup("recording")
-		elif item[0] == _("EPG settings"):
-			self.openSetup("epgsettings")
+			self.openSetup("ChannelSelection")
+		elif item[0] == _("Recording Settings"):
+			self.openSetup("Recording")
+		elif item[0] == _("EPG Settings"):
+			self.openSetup("EPG")
 ######## Select Mounts Menu ##############################
 		elif item[0] == _("Mount Manager"):
+			from Plugins.SystemPlugins.NetworkBrowser.MountManager import AutoMountManager
+			plugin_path_networkbrowser = eEnv.resolve("${libdir}/enigma2/python/Plugins/SystemPlugins/NetworkBrowser")
 			self.session.open(AutoMountManager, None, plugin_path_networkbrowser)
 		elif item[0] == _("Network Browser"):
+			from Plugins.SystemPlugins.NetworkBrowser.NetworkBrowser import NetworkBrowser
+			plugin_path_networkbrowser = eEnv.resolve("${libdir}/enigma2/python/Plugins/SystemPlugins/NetworkBrowser")
 			self.session.open(NetworkBrowser, None, plugin_path_networkbrowser)
 		elif item[0] == _("Device Manager"):
 			self.session.open(HddMount)
 ######## Select Softcam Menu ##############################
-		elif item[0] == _("Softcam Setup"):
+		elif item[0] == _("Softcam Settings"):
 			self.session.open(SoftcamSetup)
+		elif item[0] == _("OScam Information"):
+			self.session.open(OscamInfoMenu)
+		elif item[0] == _("CCcam Info"):
+			self.session.open(CCcamInfoMain)
 		elif item[0] == _("Download Softcams"):
 			self.session.open(ShowSoftcamPackages)
 ######## Select AV Setup Menu ##############################
 		elif item[0] == _("Video Settings"):
 			self.session.open(VideoSetup)
 		elif item[0] == _("Audio Settings"):
-			self.openSetup("AudioSettings")
+			self.openSetup("Audio")
 		elif item[0] == _("Auto Language"):
-			self.openSetup("autolanguagesetup")
+			self.openSetup("AutoLanguage")
 		elif item[0] == _("Audio Sync"):
+			from Plugins.Extensions.AudioSync.AC3setup import AC3LipSyncSetup
+			plugin_path_audiosync = eEnv.resolve("${libdir}/enigma2/python/Plugins/Extensions/AudioSync")
 			self.session.open(AC3LipSyncSetup, plugin_path_audiosync)
 		elif item[0] == _("VideoEnhancement"):
+			from Plugins.SystemPlugins.VideoEnhancement.plugin import VideoEnhancementSetup
 			self.session.open(VideoEnhancementSetup)
 ######## Select TUNER Setup Menu ##############################
 		elif item[0] == _("Tuner Configuration"):
@@ -503,25 +488,22 @@ class QuickMenu(Screen, ProtectedScreen):
 			self.SatfinderMain()
 ######## Select Software Manager Menu ##############################
 		elif item[0] == _("Software Update"):
-			self.session.open(SoftwarePanel)
+			from Screens.SoftwareUpdate import SoftwareUpdate
+			self.session.open(SoftwareUpdate)
 		elif item[0] == _("Flash Online"):
+			from Plugins.SystemPlugins.SoftwareManager.Flash_online import FlashOnline
 			self.session.open(FlashOnline)
 		elif item[0] == _("Complete Backup"):
-			if DFLASH == True:
-				self.session.open(dFlash)
-			elif DBACKUP == True:
-				self.session.open(dBackup)
-			else:
-				self.session.open(ImageBackup)
+			self.CompleteBackup()
 		elif item[0] == _("Backup Settings"):
 			self.session.openWithCallback(self.backupDone, BackupScreen, runBackup=True)
 		elif item[0] == _("Restore Settings"):
 			self.backuppath = getBackupPath()
-			if not path.isdir(self.backuppath):
+			if not isdir(self.backuppath):
 				self.backuppath = getOldBackupPath()
 			self.backupfile = getBackupFilename()
 			self.fullbackupfilename = self.backuppath + "/" + self.backupfile
-			if os_path.exists(self.fullbackupfilename):
+			if exists(self.fullbackupfilename):
 				self.session.openWithCallback(self.startRestore, MessageBox, _("Are you sure you want to restore your %s %s backup?\nSTB will restart after the restore") % (getMachineBrand(), getMachineName()), default=False)
 			else:
 				self.session.open(MessageBox, _("Sorry no backups found!"), MessageBox.TYPE_INFO, timeout=10)
@@ -540,7 +522,7 @@ class QuickMenu(Screen, ProtectedScreen):
 			self.session.open(PluginDownloadBrowser, 0)
 		elif item[0] == _("Remove Plugins"):
 			self.session.open(PluginDownloadBrowser, 1)
-		elif item[0] == _("Plugin Filter"):
+		elif item[0] == _("Plugin Filter Settings"):
 			self.session.open(PluginFilter)
 		elif item[0] == _("IPK Installer"):
 			try:
@@ -550,10 +532,10 @@ class QuickMenu(Screen, ProtectedScreen):
 				self.session.open(MessageBox, _("Sorry MediaScanner is not installed!"), MessageBox.TYPE_INFO, timeout=10)
 ######## Select Harddisk Menu ############################################
 		elif item[0] == _("Harddisk Setup"):
-			self.openSetup("harddisk")
+			self.openSetup("HardDisk")
 		elif item[0] == _("Initialization"):
 			self.session.open(HarddiskSelection)
-		elif item[0] == _("Filesystem Check"):
+		elif item[0] == _("File System Check"):
 			self.session.open(HarddiskFsckSelection)
 		elif item[0] == _("Convert ext3 to ext4"):
 			self.session.open(HarddiskConvertExt4Selection)
@@ -597,8 +579,10 @@ class QuickMenu(Screen, ProtectedScreen):
 					if len(configured_rotor_sats) != 0:
 						usableNims.append(x)
 				if len(usableNims) == 1:
+					from Plugins.SystemPlugins.PositionerSetup.plugin import PositionerSetup
 					self.session.open(PositionerSetup, usableNims[0])
 				elif len(usableNims) > 1:
+					from Plugins.SystemPlugins.PositionerSetup.plugin import RotorNimSelection
 					self.session.open(RotorNimSelection)
 				else:
 					self.session.open(MessageBox, _("No tuner is configured for use with a diseqc positioner!"), MessageBox.TYPE_ERROR)
@@ -607,6 +591,7 @@ class QuickMenu(Screen, ProtectedScreen):
 		if len(NavigationInstance.instance.getRecordings(False, pNavigation.isAnyRecording)) > 0:
 			self.session.open(MessageBox, _("A recording is currently running. Please stop the recording before trying to start the satfinder."), MessageBox.TYPE_ERROR)
 		else:
+			from Plugins.SystemPlugins.Satfinder.plugin import Satfinder
 			self.session.open(Satfinder)
 
 ######## SOFTWARE MANAGER TOOLS #######################
@@ -621,13 +606,25 @@ class QuickMenu(Screen, ProtectedScreen):
 			self.exe = True
 			self.session.open(RestoreScreen, runRestore=True)
 
+	def CompleteBackup(self):
+		if DFLASH:
+			from Plugins.Extensions.dFlash.plugin import dFlash
+			self.session.open(dFlash)
+		elif DBACKUP:
+			from Plugins.Extensions.dBackup.plugin import dBackup
+			self.session.open(dBackup)
+		else:
+			from Plugins.SystemPlugins.SoftwareManager.ImageBackup import ImageBackup
+			self.session.open(ImageBackup)
+
+
 
 ######## Create MENULIST format #######################
 def QuickMenuEntryComponent(name, description, long_description=None, width=540):
 	pngname = name.replace(" ", "_")
-	png = LoadPixmap("/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/" + pngname + ".png")
+	png = LoadPixmap("/usr/share/enigma2/icons/" + pngname + ".png")
 	if png is None:
-		png = LoadPixmap("/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/default.png")
+		png = LoadPixmap("/usr/share/enigma2/icons/default.png")
 
 	sf = getSkinFactor()
 	return [
@@ -653,18 +650,13 @@ class QuickMenuList(MenuList):
 	def __init__(self, list, enableWrapAround=True):
 		MenuList.__init__(self, list, enableWrapAround, eListboxPythonMultiContent)
 		sf = getSkinFactor()
-		self.l.setFont(0, gFont("Regular", int(20 * sf)))
+		self.l.setFont(0, gFont("Regular", int(19 * sf)))
 		self.l.setFont(1, gFont("Regular", int(16 * sf)))
 		self.l.setItemHeight(int(50 * sf))
 
 
-class QuickMenuSubList(MenuList):
-	def __init__(self, sublist, enableWrapAround=True):
-		MenuList.__init__(self, sublist, enableWrapAround, eListboxPythonMultiContent)
-		sf = getSkinFactor()
-		self.l.setFont(0, gFont("Regular", int(20 * sf)))
-		self.l.setFont(1, gFont("Regular", int(16 * sf)))
-		self.l.setItemHeight(int(50 * sf))
+class QuickMenuSubList(QuickMenuList):
+	pass
 
 
 class QuickMenuDevices(Screen):
@@ -731,16 +723,16 @@ class QuickMenuDevices(Screen):
 
 	def buildMy_rec(self, device):
 		device2 = device[:-1]	#strip device number
-		devicetype = path.realpath('/sys/block/' + device2 + '/device')
+		devicetype = realpath('/sys/block/' + device2 + '/device')
 		d2 = device
 		name = 'USB: '
-		mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_usbstick.png'
+		mypixmap = '/usr/share/enigma2/icons/dev_usbstick.png'
 		model = open('/sys/block/' + device2 + '/device/model').read()
 		model = str(model).replace('\n', '')
 		des = ''
 		if devicetype.find('/devices/pci') != -1:
 			name = _("HARD DISK: ")
-			mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_hdd.png'
+			mypixmap = '/usr/share/enigma2/icons/dev_hdd.png'
 		name = name + model
 
 		from Components.Console import Console

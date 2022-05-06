@@ -494,29 +494,39 @@ void eListboxPythonConfigContent::paint(gPainter &painter, eWindowStyle &style, 
 						valuesize.setWidth(valuesize.width() - 15 - labelwidth - 15);
 						painter.renderText(eRect(valueoffset, valuesize), text, flags | gPainter::RT_VALIGN_CENTER, border_color, border_size, markedpos, &m_text_offset[m_cursor]);
 					/* pvalue is borrowed */
-					} else if (!strcmp(atype, "slider"))
-					{
-						ePyObject pvalue = PyTuple_GET_ITEM(value, 1);
-						ePyObject psize = PyTuple_GET_ITEM(value, 2);
+					} else if (!strcmp(atype, "slider")) {
 
-							/* convert value to Long. fallback to -1 on error. */
-						int value = (pvalue && PyInt_Check(pvalue)) ? PyInt_AsLong(pvalue) : -1;
-						int size = (pvalue && PyInt_Check(psize)) ? PyInt_AsLong(psize) : 100;
+						ePyObject pvalue = PyTuple_GET_ITEM(value, 1);
+						ePyObject pmin = PyTuple_GET_ITEM(value, 2);
+						ePyObject pmax = PyTuple_GET_ITEM(value, 3);
+
+						int value = (pvalue && PyInt_Check(pvalue)) ? PyInt_AsLong(pvalue) : 0;
+						int min = (pmin && PyInt_Check(pmin)) ? PyInt_AsLong(pmin) : 0;
+						int max = (pmax && PyInt_Check(pmax)) ? PyInt_AsLong(pmax) : 100;
+
+						// if min < 0 and max < min -> replace min,max
+						if(min < 0 && max < min) {
+							int newmax = min;
+							min = max;
+							max = newmax;
+						}
+
+//OLD					int size = (psize && PyInt_Check(psize)) ? PyInt_AsLong(psize) : 100;
 						int value_area = 0;
 
-							/* draw value at the end of the slider */
+						/* draw value at the end of the slider */
 						if (eConfigManager::getConfigBoolValue("config.usage.show_slider_value", true))
 						{
 							value_area = 100;
 							painter.setFont(fnt2);
 							painter.renderText(eRect(ePoint(offset.x()-15, offset.y()), m_itemsize), std::to_string(value), gPainter::RT_HALIGN_RIGHT| gPainter::RT_VALIGN_CENTER, border_color, border_size);
 						}
-							/* calc. slider length */
-						int width = (m_itemsize.width() - m_seperation - 15 - value_area) * value / size;
+						/* calc. slider length */
+					    int width = (m_itemsize.width() - m_seperation - 15 - value_area) * (value - min) / (max - min);
+//OLD					int width = (m_itemsize.width() - m_seperation - 15 - value_area) * value / size;
 						int height = m_itemsize.height();
 
-
-							/* draw slider */
+						/* draw slider */
 						//painter.fill(eRect(offset.x() + m_seperation, offset.y(), width, height));
 						if (m_slider_height % 2 != height % 2)
 							m_slider_height -= 1;
@@ -539,8 +549,7 @@ void eListboxPythonConfigContent::paint(gPainter &painter, eWindowStyle &style, 
 						{
 							painter.fill(eRect(offset.x() + m_seperation, offset.y() + slider_y_offset, width, m_slider_height));
 						}
-
-							/* pvalue is borrowed */
+						/* pvalue is borrowed */
 					}
 					else if (!strcmp(atype, "pixmap"))
 					{
@@ -914,10 +923,27 @@ void eListboxPythonMultiContent::paint(gPainter &painter, eWindowStyle &style, c
 					continue;
 
 				const char *string = (PyString_Check(pstring)) ? PyString_AsString(pstring) : "<not-a-string>";
-				int x = PyInt_AsLong(px) + offset.x();
-				int y = PyInt_AsLong(py) + offset.y();
-				int width = PyInt_AsLong(pwidth);
-				int height = PyInt_AsLong(pheight);
+
+				#if PY_VERSION_HEX >= 0x030a0000
+
+					int x = PyFloat_Check(px) ? (int)PyFloat_AsDouble(px) : PyInt_AsLong(px); 
+					x += offset.x();
+
+					int y = PyFloat_Check(py) ? (int)PyFloat_AsDouble(py) : PyInt_AsLong(py); 
+					y += offset.y();
+
+					int width = PyFloat_Check(pwidth) ? (int)PyFloat_AsDouble(pwidth) : PyInt_AsLong(pwidth); 
+					int height = PyFloat_Check(pheight) ? (int)PyFloat_AsDouble(pheight) : PyInt_AsLong(pheight); 
+
+				#else
+
+					int x = PyInt_AsLong(px) + offset.x();
+					int y = PyInt_AsLong(py) + offset.y();
+					int width = PyInt_AsLong(pwidth);
+					int height = PyInt_AsLong(pheight);
+
+				#endif
+
 				int flags = PyInt_AsLong(pflags);
 				int fnt = PyInt_AsLong(pfnt);
 				int bwidth = pborderWidth ? PyInt_AsLong(pborderWidth) : 0;
@@ -1035,11 +1061,29 @@ void eListboxPythonMultiContent::paint(gPainter &painter, eWindowStyle &style, c
 						pbackColorSelected=ePyObject();
 				}
 
-				int x = PyInt_AsLong(px) + offset.x();
-				int y = PyInt_AsLong(py) + offset.y();
-				int width = PyInt_AsLong(pwidth);
-				int height = PyInt_AsLong(pheight);
-				int filled = PyInt_AsLong(pfilled_perc);
+
+				#if PY_VERSION_HEX >= 0x030a0000
+
+					int x = PyFloat_Check(px) ? (int)PyFloat_AsDouble(px) : PyInt_AsLong(px); 
+					x += offset.x();
+
+					int y = PyFloat_Check(py) ? (int)PyFloat_AsDouble(py) : PyInt_AsLong(py); 
+					y += offset.y();
+
+					int width = PyFloat_Check(pwidth) ? (int)PyFloat_AsDouble(pwidth) : PyInt_AsLong(pwidth); 
+					int height = PyFloat_Check(pheight) ? (int)PyFloat_AsDouble(pheight) : PyInt_AsLong(pheight); 
+					int filled = PyFloat_Check(pfilled_perc) ? (int)PyFloat_AsDouble(pfilled_perc) : PyInt_AsLong(pfilled_perc); 
+
+				#else
+
+					int x = PyInt_AsLong(px) + offset.x();
+					int y = PyInt_AsLong(py) + offset.y();
+					int width = PyInt_AsLong(pwidth);
+					int height = PyInt_AsLong(pheight);
+					int filled = PyInt_AsLong(pfilled_perc);
+
+				#endif
+
 
 				if ((filled < 0) && data) /* if the string is in a negative number, it refers to the 'data' list. */
 					filled = PyInt_AsLong(PyTuple_GetItem(data, -filled));
@@ -1125,10 +1169,27 @@ void eListboxPythonMultiContent::paint(gPainter &painter, eWindowStyle &style, c
 				if (!ppixmap || ppixmap == Py_None)
 					continue;
 
-				int x = PyInt_AsLong(px) + offset.x();
-				int y = PyInt_AsLong(py) + offset.y();
-				int width = PyInt_AsLong(pwidth);
-				int height = PyInt_AsLong(pheight);
+				#if PY_VERSION_HEX >= 0x030a0000
+
+					int x = PyFloat_Check(px) ? (int)PyFloat_AsDouble(px) : PyInt_AsLong(px); 
+					x += offset.x();
+
+					int y = PyFloat_Check(py) ? (int)PyFloat_AsDouble(py) : PyInt_AsLong(py); 
+					y += offset.y();
+
+					int width = PyFloat_Check(pwidth) ? (int)PyFloat_AsDouble(pwidth) : PyInt_AsLong(pwidth); 
+					int height = PyFloat_Check(pheight) ? (int)PyFloat_AsDouble(pheight) : PyInt_AsLong(pheight); 
+
+				#else
+
+					int x = PyInt_AsLong(px) + offset.x();
+					int y = PyInt_AsLong(py) + offset.y();
+					int width = PyInt_AsLong(pwidth);
+					int height = PyInt_AsLong(pheight);
+
+				#endif
+
+
 				int flags = 0;
 				ePtr<gPixmap> pixmap;
 				if (SwigFromPython(pixmap, ppixmap))

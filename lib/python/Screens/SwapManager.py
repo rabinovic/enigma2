@@ -15,19 +15,17 @@ from glob import glob
 import stat
 import six
 
-config.plugins.infopanel = ConfigSubsection()
-config.plugins.infopanel.swapautostart = ConfigYesNo(default=False)
+config.usage.swapautostart = ConfigYesNo(default=False)
 
 startswap = None
 
 
-def SwapAutostart(reason, session=None, **kwargs):
+def SwapAutostart():
 	global startswap
-	if reason == 0:
-		if config.plugins.infopanel.swapautostart.value:
-			print("[SwapManager] autostart")
-			startswap = StartSwap()
-			startswap.start()
+	if config.usage.swapautostart.value:
+		print("[SwapManager] autostart")
+		startswap = StartSwap()
+		startswap.start()
 
 
 class StartSwap:
@@ -35,7 +33,7 @@ class StartSwap:
 		self.Console = Console()
 
 	def start(self):
-	 	self.Console.ePopen("sfdisk -l /dev/sd? 2>/dev/null | grep swap", self.startSwap2)
+		self.Console.ePopen("sfdisk -l /dev/sd? 2>/dev/null | grep swap", self.startSwap2)
 
 	def startSwap2(self, result=None, retval=None, extra_args=None):
 		if result != None:
@@ -46,7 +44,7 @@ class StartSwap:
 				if line.find('sd') != -1:
 					parts = line.strip().split()
 					swap_place = parts[0]
-					open('/etc/fstab.tmp', 'w').writelines([l for l in file('/etc/fstab').readlines() if swap_place not in l])
+					open('/etc/fstab.tmp', 'w').writelines([l for l in open('/etc/fstab').readlines() if swap_place not in l])
 					rename('/etc/fstab.tmp', '/etc/fstab')
 					print("[SwapManager] Found a swap partition:", swap_place)
 		else:
@@ -95,7 +93,7 @@ class Swap(Screen):
 
 	def __init__(self, session):
 		Screen.__init__(self, session)
-		Screen.setTitle(self, _("Swap Manager"))
+		self.setTitle(_("Swap Manager"))
 		self['lab1'] = Label()
 		self['autostart_on'] = Pixmap()
 		self['autostart_off'] = Pixmap()
@@ -115,7 +113,13 @@ class Swap(Screen):
 		self.swap_place = ''
 		self.new_place = ''
 		self.creatingswap = False
-		self['actions'] = ActionMap(['WizardActions', 'ColorActions', "MenuActions"], {'back': self.close, 'red': self.actDeact, 'green': self.createDel, 'yellow': self.autoSsWap, "menu": self.close})
+		self['actions'] = ActionMap(['WizardActions', 'ColorActions', "MenuActions"], {
+			'back': self.close,
+			'red': self.actDeact,
+			'green': self.createDel,
+			'yellow': self.autoSsWap,
+			"menu": self.close
+		})
 		self.activityTimer = eTimer()
 		self.activityTimer.timeout.get().append(self.getSwapDevice)
 		self.updateSwap()
@@ -138,8 +142,8 @@ class Swap(Screen):
 		self.activityTimer.stop()
 		if path.exists('/etc/rcS.d/S98SwapManager'):
 			remove('/etc/rcS.d/S98SwapManager')
-			config.plugins.infopanel.swapautostart.value = True
-			config.plugins.infopanel.swapautostart.save()
+			config.usage.swapautostart.value = True
+			config.usage.swapautostart.save()
 		if path.exists('/tmp/swapdevices.tmp'):
 			remove('/tmp/swapdevices.tmp')
 		self.Console.ePopen("sfdisk -l /dev/sd? 2>/dev/null | grep swap", self.updateSwap2)
@@ -184,12 +188,12 @@ class Swap(Screen):
 						self.swapsize = info[stat.ST_SIZE]
 						continue
 
-		if config.plugins.infopanel.swapautostart.value and self.swap_place:
+		if config.usage.swapautostart.value and self.swap_place:
 			self['autostart_off'].hide()
 			self['autostart_on'].show()
 		else:
-			config.plugins.infopanel.swapautostart.value = False
-			config.plugins.infopanel.swapautostart.save()
+			config.usage.swapautostart.value = False
+			config.usage.swapautostart.save()
 			configfile.save()
 			self['autostart_on'].hide()
 			self['autostart_off'].show()
@@ -209,9 +213,9 @@ class Swap(Screen):
 
 		if self.swapsize > 0:
 			if self.swapsize >= 1024:
-				self.swapsize = int(self.swapsize) / 1024
+				self.swapsize = int(self.swapsize) // 1024
 				if self.swapsize >= 1024:
-					self.swapsize = int(self.swapsize) / 1024
+					self.swapsize = int(self.swapsize) // 1024
 				self.swapsize = str(self.swapsize) + ' ' + 'MB'
 			else:
 				self.swapsize = str(self.swapsize) + ' ' + 'KB'
@@ -266,9 +270,9 @@ class Swap(Screen):
 	def createDel2(self, result, retval, extra_args=None):
 		if retval == 0:
 			remove(self.swap_place)
-			if config.plugins.infopanel.swapautostart.value:
-				config.plugins.infopanel.swapautostart.value = False
-				config.plugins.infopanel.swapautostart.save()
+			if config.usage.swapautostart.value:
+				config.usage.swapautostart.value = False
+				config.usage.swapautostart.save()
 				configfile.save()
 			self.updateSwap()
 
@@ -306,12 +310,12 @@ class Swap(Screen):
 
 	def autoSsWap(self):
 		if self.swap_place:
-			if config.plugins.infopanel.swapautostart.value:
-				config.plugins.infopanel.swapautostart.value = False
-				config.plugins.infopanel.swapautostart.save()
+			if config.usage.swapautostart.value:
+				config.usage.swapautostart.value = False
+				config.usage.swapautostart.save()
 			else:
-				config.plugins.infopanel.swapautostart.value = True
-				config.plugins.infopanel.swapautostart.save()
+				config.usage.swapautostart.value = True
+				config.usage.swapautostart.save()
 			configfile.save()
 		else:
 			mybox = self.session.open(MessageBox, _("You have to create a Swap File before to activate the autostart."), MessageBox.TYPE_INFO)

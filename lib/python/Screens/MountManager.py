@@ -1,14 +1,14 @@
 from __future__ import print_function
 from Screens.Screen import Screen
 from enigma import eTimer
-from boxbranding import getMachineBrand, getMachineName, getBoxType, getMachineBuild
+from boxbranding import getMachineBrand, getMachineName, getMachineBuild
 from Screens.MessageBox import MessageBox
 from Screens.Standby import TryQuitMainloop
 from Components.ActionMap import ActionMap
 from Components.Label import Label
 from Components.Pixmap import Pixmap
 from Components.ConfigList import ConfigListScreen
-from Components.config import getConfigListEntry, config, ConfigSelection, NoSave, configfile
+from Components.config import getConfigListEntry, ConfigSelection, NoSave
 from Components.Console import Console
 from Components.Sources.List import List
 from Components.Sources.StaticText import StaticText
@@ -16,7 +16,7 @@ from Tools.LoadPixmap import LoadPixmap
 from os import system, rename, path, mkdir, remove
 from time import sleep
 from re import search
-import six
+from six import ensure_str
 
 
 class HddMount(Screen):
@@ -105,7 +105,7 @@ class HddMount(Screen):
 			device = parts[3]
 			if not search('sd[a-z][1-9]', device) and not search('mmcblk[0-9]p[1-9]', device):
 				continue
-			if getMachineBuild() in ('multibox', 'multiboxse', 'dagsmv200', 'gbmv200', 'i55se', 'h9se', 'h9combose', 'h9combo', 'h10', 'h11', 'v8plus', 'hd60', 'hd61', 'pulse4k', 'pulse4kmini', 'vuduo4k', 'vuduo4kse', 'ustym4kpro', 'ustym4kott', 'beyonwizv2', 'viper4k', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'cc1', 'dags72604', 'u51', 'u52', 'u53', 'u532', 'u533', 'u54', 'u56', 'u57', 'u571', 'vuzero4k', 'u5', 'sf5008', 'et13000', 'et1x000', 'vuuno4k', 'vuuno4kse', 'vuultimo4k', 'vusolo4k', 'hd51', 'hd52', 'dm820', 'dm7080', 'sf4008', 'dm900', 'dm920', 'gb7252', 'gb72604', 'dags7252', 'vs1500', 'h7', '8100s') and search('mmcblk0p[1-9]', device):
+			if getMachineBuild() in ('multibox', 'multiboxse', 'dagsmv200', 'gbmv200', 'i55se', 'h9se', 'h9combose', 'h9combo', 'h10', 'h11', 'v8plus', 'hd60', 'hd61', 'hd66se', 'pulse4k', 'pulse4kmini', 'vuduo4k', 'vuduo4kse', 'ustym4kpro', 'ustym4kottpremium', 'beyonwizv2', 'viper4k', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'cc1', 'dags72604', 'u51', 'u52', 'u53', 'u532', 'u533', 'u54', 'u56', 'u57', 'u571', 'vuzero4k', 'u5', 'sf5008', 'et13000', 'et1x000', 'vuuno4k', 'vuuno4kse', 'vuultimo4k', 'vusolo4k', 'hd51', 'hd52', 'dm820', 'dm7080', 'sf4008', 'dm900', 'dm920', 'gb7252', 'gb72604', 'dags7252', 'vs1500', 'h7', '8100s', 'og2ott4k') and search('mmcblk0p[1-9]', device):
 				continue
 			if getMachineBuild() in ('xc7439', 'osmio4k', 'osmio4kplus', 'osmini4k') and search('mmcblk1p[1-9]', device):
 				continue
@@ -203,13 +203,13 @@ class HddMount(Screen):
 		devicetype = path.realpath('/sys/block/' + device2 + '/device')
 		d2 = device
 		name = 'USB: '
-		mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_usbstick.png'
+		mypixmap = '/usr/share/enigma2/icons/dev_usbstick.png'
 		if device2.startswith('mmcblk'):
 			try:
 				model = open('/sys/block/' + device2 + '/device/name').read()
 			except:
 				model = ''
-			mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_mmc.png'
+			mypixmap = '/usr/share/enigma2/icons/dev_mmc.png'
 			name = 'MMC: '
 		else:
 			try:
@@ -220,7 +220,7 @@ class HddMount(Screen):
 		des = ''
 		if devicetype.find('/devices/pci') != -1 or devicetype.find('ahci') != -1:
 			name = _("HARD DISK: ")
-			mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_hdd.png'
+			mypixmap = '/usr/share/enigma2/icons/dev_hdd.png'
 		name = name + model
 		self.Console = Console()
 		self.Console.ePopen("sfdisk -l | grep swap | awk '{print $(NF-9)}' >/tmp/devices.tmp")
@@ -351,7 +351,7 @@ class HddMount(Screen):
 	def add_fstab(self, result=None, retval=None, extra_args=None):
 		self.device = extra_args[0]
 		self.mountp = extra_args[1]
-		self.device_uuid_tmp = six.ensure_str(result).split('UUID=')
+		self.device_uuid_tmp = ensure_str(result).split('UUID=')
 		self.device_uuid_tmp = self.device_uuid_tmp[1].replace('"', "")
 		self.device_uuid_tmp = self.device_uuid_tmp.replace('\n', "")
 		self.device_uuid_tmp = self.device_uuid_tmp.split()[0]
@@ -423,7 +423,7 @@ class DevicePanelConf(Screen, ConfigListScreen):
 			device = parts[3]
 			if not search('sd[a-z][1-9]', device) and not search('mmcblk[0-9]p[1-9]', device):
 				continue
-			if getMachineBuild() in ('dagsmv200', 'gbmv200', 'multibox', 'multiboxse', 'i55se', 'h9se', 'h9combose', 'h9combo', 'h10', 'h11', 'v8plus', 'hd60', 'hd61', 'pulse4k', 'pulse4kmini', 'vuduo4k', 'vuduo4kse', 'ustym4kpro', 'ustym4kott', 'beyonwizv2', 'viper4k', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'cc1', 'dags72604', 'u51', 'u52', 'u53', 'u532', 'u533', 'u54', 'u56', 'u57', 'u571', 'vuzero4k', 'u5', 'sf5008', 'et13000', 'et1x000', 'vuuno4k', 'vuuno4kse', 'vuultimo4k', 'vusolo4k', 'hd51', 'hd52', 'dm820', 'dm7080', 'sf4008', 'dm900', 'dm920', 'gb7252', 'gb72604', 'dags7252', 'vs1500', 'h7', '8100s') and search('mmcblk0p[1-9]', device):
+			if getMachineBuild() in ('dagsmv200', 'gbmv200', 'multibox', 'multiboxse', 'i55se', 'h9se', 'h9combose', 'h9combo', 'h10', 'h11', 'v8plus', 'hd60', 'hd61', 'hd66se', 'pulse4k', 'pulse4kmini', 'vuduo4k', 'vuduo4kse', 'ustym4kpro', 'ustym4kottpremium', 'beyonwizv2', 'viper4k', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'cc1', 'dags72604', 'u51', 'u52', 'u53', 'u532', 'u533', 'u54', 'u56', 'u57', 'u571', 'vuzero4k', 'u5', 'sf5008', 'et13000', 'et1x000', 'vuuno4k', 'vuuno4kse', 'vuultimo4k', 'vusolo4k', 'hd51', 'hd52', 'dm820', 'dm7080', 'sf4008', 'dm900', 'dm920', 'gb7252', 'gb72604', 'dags7252', 'vs1500', 'h7', '8100s', 'og2ott4k') and search('mmcblk0p[1-9]', device):
 				continue
 			if getMachineBuild() in ('xc7439', 'osmio4k', 'osmio4kplus', 'osmini4k') and search('mmcblk1p[1-9]', device):
 				continue
@@ -439,6 +439,7 @@ class DevicePanelConf(Screen, ConfigListScreen):
 		self['Linconn'].hide()
 
 	def buildMy_rec(self, device):
+		device2 = ''
 		try:
 			if device.find('1') > 1:
 				device2 = device.replace('1', '')
@@ -522,10 +523,10 @@ class DevicePanelConf(Screen, ConfigListScreen):
 		devicetype = path.realpath('/sys/block/' + device2 + '/device')
 		d2 = device
 		name = 'USB: '
-		mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_usbstick.png'
+		mypixmap = '/usr/share/enigma2/icons/dev_usbstick.png'
 		if device2.startswith('mmcblk'):
 			model = open('/sys/block/' + device2 + '/device/name').read()
-			mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_mmc.png'
+			mypixmap = '/usr/share/enigma2/icons/dev_mmc.png'
 			name = 'MMC: '
 		else:
 			model = open('/sys/block/' + device2 + '/device/model').read()
@@ -534,7 +535,7 @@ class DevicePanelConf(Screen, ConfigListScreen):
 		print("test:")
 		if devicetype.find('/devices/pci') != -1 or devicetype.find('ahci') != -1:
 			name = _("HARD DISK: ")
-			mypixmap = '/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/icons/dev_hdd.png'
+			mypixmap = '/usr/share/enigma2/icons/dev_hdd.png'
 		name = name + model
 		f = open('/proc/mounts', 'r')
 		for line in f.readlines():
@@ -556,9 +557,9 @@ class DevicePanelConf(Screen, ConfigListScreen):
 				if (((float(size) / 1024) / 1024) / 1024) > 1:
 					des = _("Size: ") + str(round((((float(size) / 1024) / 1024) / 1024), 2)) + _("TB")
 				elif ((size / 1024) / 1024) > 1:
-					des = _("Size: ") + str((size / 1024) / 1024) + _("GB")
+					des = _("Size: ") + str((size // 1024) // 1024) + _("GB")
 				else:
-					des = _("Size: ") + str(size / 1024) + _("MB")
+					des = _("Size: ") + str(size // 1024) + _("MB")
 			else:
 				try:
 					size = open('/sys/block/' + device2 + '/' + device + '/size').read()
@@ -569,9 +570,9 @@ class DevicePanelConf(Screen, ConfigListScreen):
 				if ((((float(size) / 2) / 1024) / 1024) / 1024) > 1:
 					des = _("Size: ") + str(round(((((float(size) / 2) / 1024) / 1024) / 1024), 2)) + _("TB")
 				elif (((size / 2) / 1024) / 1024) > 1:
-					des = _("Size: ") + str(((size / 2) / 1024) / 1024) + _("GB")
+					des = _("Size: ") + str(((size // 2) // 1024) // 1024) + _("GB")
 				else:
-					des = _("Size: ") + str((size / 2) / 1024) + _("MB")
+					des = _("Size: ") + str((size // 2) // 1024) + _("MB")
 		f.close()
 		item = NoSave(ConfigSelection(default='/media/' + device, choices=[('/media/' + device, '/media/' + device),
 		('/media/hdd', '/media/hdd'),
@@ -619,7 +620,7 @@ class DevicePanelConf(Screen, ConfigListScreen):
 		if len(result) == 0:
 			print("[MountManager] error get UUID for device %s" % self.device)
 			return
-		self.device_tmp = six.ensure_str(result).split(' ')
+		self.device_tmp = ensure_str(result).split(' ')
 		if self.device_tmp[0].startswith('UUID='):
 			self.device_uuid = self.device_tmp[0].replace('"', "")
 			self.device_uuid = self.device_uuid.replace('\n', "")

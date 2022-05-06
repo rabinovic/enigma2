@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        gcc: [8, 9, 10, 11]
+        gcc: [11]
+        python: ['3.9', '3.10']
     steps:
       - name: Install prerequisites
         run: |
@@ -41,9 +42,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: '7.0'
+
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: ${{ matrix.python }}
 
       - name: Build enigma2 dependencies, gcc-${{ matrix.gcc }}
         env:
@@ -53,8 +55,8 @@ jobs:
           echo "installing libdvbsi++"
           pushd .
           cd /tmp
-          git clone --depth 1 git://git.opendreambox.org/git/obi/libdvbsi++.git
-          cd libdvbsi++
+          git clone --depth 1 https://github.com/oe-alliance/libdvbsi.git
+          cd libdvbsi
           autoreconf -i
           ./configure
           make

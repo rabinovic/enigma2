@@ -116,6 +116,7 @@ config.plugins.filecommander.sortingLeft_tmp = NoSave(ConfigText(default=tmpLeft
 config.plugins.filecommander.sortingRight_tmp = NoSave(ConfigText(default=tmpRight))
 config.plugins.filecommander.path_left_tmp = NoSave(ConfigText(default=config.plugins.filecommander.path_left.value))
 config.plugins.filecommander.path_right_tmp = NoSave(ConfigText(default=config.plugins.filecommander.path_right.value))
+config.plugins.filecommander.calculate_directorysize = ConfigYesNo(default=False)
 
 cfg = config.plugins.filecommander
 
@@ -137,7 +138,7 @@ class FileCommanderConfigScreen(Setup):
 
 	def keyOK(self):
 		if self["config"].getCurrent()[1] is config.plugins.filecommander.path_default:
-			self.session.openWithCallback(self.pathSelected, LocationBox, text=_("Default Folder"), currDir=config.plugins.filecommander.path_default.getValue(), minFree=100)
+			self.session.openWithCallback(self.pathSelected, LocationBox, text=_("Default folder"), currDir=config.plugins.filecommander.path_default.getValue(), minFree=100)
 		else:
 			Setup.keyOK(self)
 
@@ -290,6 +291,7 @@ class FileCommanderScreen(Screen, HelpableScreen, key_actions):
 			"5": (self.goDefaultfolder, _("Go to bookmarked folder")),
 			"6": (self.run_file, self.help_run_file),
 			"7": (self.run_ffprobe, self.help_run_ffprobe),
+			"8": (self.run_dirsize, self.help_run_dirsize),
 			# "8": (self.run_mediainfo, self.help_run_mediainfo),
 			"9": (self.run_hashes, _("Calculate file checksums")),
 			"startTeletext": (self.file_viewer, _("View or edit file (if size < 1MB)")),
@@ -324,6 +326,11 @@ class FileCommanderScreen(Screen, HelpableScreen, key_actions):
 		self.checkJobs_Timer.callback.append(self.checkJobs_TimerCB)
 		#self.onLayoutFinish.append(self.onLayout)
 		self.onLayoutFinish.append(self.checkJobs_TimerCB)
+
+		config.plugins.filecommander.calculate_directorysize.addNotifier(self.calculate_directorysizeChanged)
+
+	def calculate_directorysizeChanged(self, configElement):
+		self.calculate_directorysize = configElement.value
 
 	def onLayout(self):
 		if self.jobs_old:
@@ -494,7 +501,7 @@ class FileCommanderScreen(Screen, HelpableScreen, key_actions):
 			cfg.bookmarks.value = bookmarks
 			cfg.bookmarks.save()
 		bookmarks = [(x, x) for x in bookmarks]
-		bookmarks.append((_("Storage devices"), None))
+		bookmarks.append((_("Storage Devices"), None))
 		self.session.openWithCallback(self.locationCB, OrderedChoiceBox, title=_("Select a path"), list=bookmarks, order="fc_bookmarks_order")
 
 	def locationCB(self, answer):
@@ -974,7 +981,7 @@ class FileCommanderScreen(Screen, HelpableScreen, key_actions):
 				else:
 					pathname = dir # parent folder
 				self[side + "_head1"].text = pathname
-				self[side + "_head2"].updateList(self.statInfo(self[side]))
+				self[side + "_head2"].updateList(self.statInfo(self[side], self.calculate_directorysize))
 			else:
 				self[side + "_head1"].text = ""
 				self[side + "_head2"].updateList(())

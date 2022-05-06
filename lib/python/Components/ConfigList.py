@@ -77,8 +77,8 @@ class ConfigList(GUIComponent):
 	GUI_WIDGET = eListbox
 
 	def isChanged(self):
-		for x in self.list:
-			if x[1].isChanged():
+		for item in self.list:
+			if len(item) > 1 and item[1].isChanged():
 				return True
 		return False
 
@@ -210,7 +210,7 @@ class ConfigListScreen:
 			"gotAsciiCode": (self.keyGotAscii, _("Keyboard data entry"))
 		}, prio=1, description=_("Common Setup Actions"))
 		self["charConfigActions"].setEnabled(False if fullUI else True)
-		self["editConfigActions"] = HelpableNumberActionMap(self, ["TextEditActions"], {
+		self["editConfigActions"] = HelpableActionMap(self, ["TextEditActions"], {
 			"backspace": (self.keyBackspace, _("Delete character to left of cursor or select AM times")),
 			"delete": (self.keyDelete, _("Delete character under cursor or select PM times")),
 			"erase": (self.keyErase, _("Delete all the text")),
@@ -233,6 +233,7 @@ class ConfigListScreen:
 		self.setCancelMessage(None)
 		self.setRestartMessage(None)
 		self.onChangedEntry = []
+		self.onSave = []
 		self.onExecBegin.append(self.showHelpWindow)
 		self.onExecEnd.append(self.hideHelpWindow)
 		self.onLayoutFinish.append(self.noNativeKeys)  # self.layoutFinished is already in use!
@@ -403,6 +404,8 @@ class ConfigListScreen:
 		self["config"].handleKey(ACTIONKEY_0 + number, self.entryChanged)
 
 	def keySave(self):
+		for notifier in self.onSave:
+			notifier()
 		if self.saveAll():
 			self.session.openWithCallback(self.restartConfirm, MessageBox, self.restartMsg, default=True, type=MessageBox.TYPE_YESNO)
 		else:
@@ -415,12 +418,26 @@ class ConfigListScreen:
 
 	def saveAll(self):
 		restart = False
-		for x in self["config"].list:
-			if x[0].endswith("*") and x[1].isChanged():
-				restart = True
-			x[1].save()
+		for item in self["config"].list:
+			if len(item) > 1:
+				if item[0].endswith("*") and item[1].isChanged():
+					restart = True
+				item[1].save()
 		configfile.save()
 		return restart
+
+	def addSaveNotifier(self, notifier):
+		if callable(notifier):
+			self.onSave.append(notifier)
+		else:
+			raise TypeError("[ConfigList] Error: Notifier must be callable!")
+
+	def removeSaveNotifier(self, notifier):
+		while notifier in self.onSave:
+			self.onSave.remove(notifier)
+
+	def clearSaveNotifiers(self):
+		self.onSave = []
 
 	def keyCancel(self):
 		self.closeConfigList(())
@@ -438,8 +455,9 @@ class ConfigListScreen:
 	def cancelConfirm(self, result):
 		if not result:
 			return
-		for x in self["config"].list:
-			x[1].cancel()
+		for item in self["config"].list:
+			if len(item) > 1:
+				item[1].cancel()
 		if not hasattr(self, "closeParameters"):
 			self.closeParameters = ()
 		self.close(*self.closeParameters)

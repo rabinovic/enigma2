@@ -28,7 +28,7 @@ class Input(VariableText, GUIComponent, NumericalTextInput):
 		self.setText(text)
 
 	def __len__(self):
-		return len(self.text)
+		return len(self.text)  #NOSONAR
 
 	def getText(self):
 		return self.textU.encode("UTF-8", "ignore") if PY2 else self.textU
@@ -239,7 +239,7 @@ class Input(VariableText, GUIComponent, NumericalTextInput):
 		self.innerRight()
 		self.update()
 
-	def number(self, number):
+	def number(self, number):  #NOSONAR
 		if self.type == self.TEXT:
 			owr = self.lastKey == number
 			newChar = self.getKey(number)

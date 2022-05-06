@@ -158,7 +158,7 @@ int eHttpsStream::openUrl(const std::string &url, std::string &newurl)
 		goto error;
 	}
 
-	retval = SSL_connect(ssl);
+	retval = SSL_connect(ssl); //NOSONAR
 	if (retval <= 0)
 	{
 		errstr = ERR_reason_error_string(ERR_get_error());
@@ -629,5 +629,4 @@ ssize_t eHttpsStream::SSL_readLine(SSL *ssl, char** buffer, size_t* bufsize)
 		}
 		if ((*buffer)[i] != '\r') i++;
 	}
-	return -1;
 }

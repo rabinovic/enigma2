@@ -46,7 +46,7 @@ config.movielist.show_live_tv_in_movielist = ConfigYesNo(default=True)
 config.movielist.fontsize = ConfigSelectionNumber(default=0, stepwidth=1, min=-8, max=10, wraparound=True)
 config.movielist.itemsperpage = ConfigSelectionNumber(default=20, stepwidth=1, min=3, max=30, wraparound=True)
 config.movielist.useslim = ConfigYesNo(default=False)
-config.movielist.useextlist = ConfigSelection(default='0', choices={'0': _('No'), '1': _('ServiceName'), '2': _('ServicePicon')})
+config.movielist.useextlist = ConfigSelection(default="0", choices={"0": _("No"), "1": _("ServiceName"), "2": _("ServicePicon")})
 config.movielist.eventinfo_delay = ConfigSelectionNumber(50, 1000, 50, default=100)
 config.movielist.last_videodir = ConfigText(default=resolveFilename(SCOPE_HDD))
 config.movielist.last_timer_videodir = ConfigText(default=resolveFilename(SCOPE_HDD))
@@ -57,6 +57,7 @@ config.movielist.settings_per_directory = ConfigYesNo(default=True)
 config.movielist.root = ConfigSelection(default="/media", choices=["/", "/media", "/media/hdd", "/media/hdd/movie", "/media/usb", "/media/usb/movie"])
 config.movielist.hide_extensions = ConfigYesNo(default=False)
 config.movielist.stop_service = ConfigYesNo(default=True)
+config.movielist.show_underscores = ConfigYesNo(default=False)
 
 userDefinedButtons = None
 last_selected_dest = []
@@ -78,8 +79,8 @@ l_moviesort = [
 config.movielist.moviesort = ConfigSelection(default=MovieList.SORT_GROUPWISE, choices=l_moviesort)
 
 l_desc = [
-	(MovieList.SHOW_DESCRIPTION, _("yes")),
-	(MovieList.HIDE_DESCRIPTION, _("no"))]
+	(MovieList.SHOW_DESCRIPTION, _("Yes")),
+	(MovieList.HIDE_DESCRIPTION, _("No"))]
 
 config.movielist.description = ConfigSelection(default=MovieList.SHOW_DESCRIPTION, choices=l_desc)
 
@@ -605,14 +606,12 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			self.list.moveToFirstMovie()
 
 	def keyNumberGlobal(self, number):
-		unichar = self.numericalTextInput.getKey(number)
-		charstr = unichar.encode("utf-8")
+		charstr = self.numericalTextInput.getKey(number)
 		if len(charstr) == 1:
 			self.list.moveToChar(charstr[0], self["chosenletter"])
 
 	def keyAsciiCode(self):
-		unichar = chr(getPrevAsciiCode())
-		charstr = unichar.encode("utf-8")
+		charstr = chr(getPrevAsciiCode())
 		if len(charstr) == 1:
 			self.list.moveToString(charstr[0], self["chosenletter"])
 
@@ -1824,11 +1823,11 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 		cleanAll(split(current.getPath())[0])
 
 	def showNetworkMounts(self):
-		import NetworkSetup
-		self.session.open(NetworkSetup.NetworkMountsMenu)
+		from Screens.NetworkSetup import NetworkMountsMenu
+		self.session.open(NetworkMountsMenu)
 
 	def showDeviceMounts(self):
-		from Plugins.Extensions.Infopanel.MountManager import HddMount
+		from Screens.MountManager import HddMount
 		self.session.open(HddMount)
 
 	def showActionFeedback(self, text):
@@ -1987,7 +1986,7 @@ class MovieContextMenu(Screen, ProtectedScreen):
 		Screen.__init__(self, session)
 		ProtectedScreen.__init__(self)
 		self.skinName = "Setup"
-		self.setTitle(_("Movie List Setup"))
+		self.setTitle(_("Movie List Settings"))
 		self["HelpWindow"] = Pixmap()
 		self["HelpWindow"].hide()
 		self["VKeyIcon"] = Boolean(False)
@@ -2078,7 +2077,7 @@ class MovieContextMenuSummary(Screen):
 class MovieSelectionSetup(Setup):
 	def __init__(self, session):
 		Setup.__init__(self, session, setup="MovieSelection")
-		self.setTitle(_("Movie List Setup"))
+		self.setTitle(_("Movie List Settings"))
 
 	def keySave(self):
 		self.saveAll()

@@ -114,7 +114,7 @@ class Standby2(Screen):
 		if os.path.exists("/usr/script/StandbyLeave.sh"):
 			Console().ePopen("/usr/script/StandbyLeave.sh &")
 
-		if (getBrandOEM() in ('fulan', 'clap', 'dinobot') or getMachineBuild() in ('gbmv200', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'ustym4kpro', 'ustym4kott', 'beyonwizv2', 'viper4k')):
+		if (getBrandOEM() in ('fulan', 'clap', 'dinobot') or getMachineBuild() in ('gbmv200', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'ustym4kpro', 'ustym4kottpremium', 'beyonwizv2', 'viper4k', 'og2ott4k', 'sfx6008')):
 			try:
 				open("/proc/stb/hdmi/output", "w").write("on")
 			except:
@@ -230,7 +230,7 @@ class Standby2(Screen):
 			self.avswitch.setInput("SCART")
 		else:
 			self.avswitch.setInput("AUX")
-		if (getBrandOEM() in ('fulan', 'clap', 'dinobot') or getMachineBuild() in ('gbmv200', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'ustym4kpro', 'ustym4kott', 'beyonwizv2', 'viper4k')):
+		if (getBrandOEM() in ('fulan', 'clap', 'dinobot') or getMachineBuild() in ('gbmv200', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'ustym4kpro', 'ustym4kottpremium', 'beyonwizv2', 'viper4k', 'og2ott4k', 'sfx6008')):
 			try:
 				open("/proc/stb/hdmi/output", "w").write("off")
 			except:
@@ -419,12 +419,11 @@ class TryQuitMainloop(MessageBox):
 				if not recordings: # no more recordings exist
 					rec_time = self.session.nav.RecordTimer.getNextRecordingTime()
 					if rec_time > 0 and (rec_time - time()) < 360:
-						self.initTimeout(360) # wait for next starting timer
-						self.startTimer()
+						self.timer.start(360) # wait for next starting timer
 					else:
 						self.close(True) # immediate shutdown
 			elif event == iRecordableService.evStart:
-				self.stopTimer()
+				self.stopTimer("getRecordEvent")
 
 	def close(self, value):
 		global quitMainloopCode
@@ -446,6 +445,8 @@ class TryQuitMainloop(MessageBox):
 				setLCDModeMinitTV("0")
 			if BoxInfo.getItem("model") == "vusolo4k":  #workaround for white display flash
 				open("/proc/stb/fp/oled_brightness", "w").write("0")
+			if BoxInfo.getItem("model") == "pulse4k":
+				open("/proc/stb/lcd/oled_brightness", "w").write("0")
 			quitMainloop(self.retval)
 		else:
 			MessageBox.close(self, True)

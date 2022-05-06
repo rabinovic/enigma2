@@ -67,7 +67,7 @@ class SkinSelectorBase:
 			self["Preview"].show()
 
 	def layoutFinished(self):
-		self.picload.setPara((self["Preview"].instance.size().width(), self["Preview"].instance.size().height(), 1.0, 1, False, 1, "#00000000"))
+		self.picload.setPara((self["Preview"].instance.size().width(), self["Preview"].instance.size().height(), 1, 1, False, 1, "#00000000"))
 		tmp = self.config.value.find("/" + self.SKINXML)
 		if tmp != -1:
 			tmp = self.config.value[:tmp]
@@ -203,6 +203,6 @@ class LcdSkinSelector(Screen, SkinSelectorBase):
 	def __init__(self, session, args=None):
 		Screen.__init__(self, session)
 		SkinSelectorBase.__init__(self, args)
-		Screen.setTitle(self, _("LCD Skin Setup"))
+		Screen.setTitle(self, _("LCD Skin Settings"))
 		self.skinName = "SkinSelector"
 		self.config = config.skin.display_skin

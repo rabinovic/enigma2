@@ -5,7 +5,7 @@ from boxbranding import getBoxType, getBrandOEM, getMachineBrand
 from time import localtime, mktime
 from datetime import datetime
 import xml.etree.cElementTree
-from os import path
+from os import path, access, F_OK
 import six
 
 from enigma import eDVBSatelliteEquipmentControl as secClass, \
@@ -723,7 +723,7 @@ class SecConfigure:
 
 
 class NIM(object):
-	def __init__(self, slot, type, description, has_outputs=True, internally_connectable=None, multi_type=None, frontend_id=None, i2c=None, is_empty=False, input_name=None, supports_blind_scan=False):
+	def __init__(self, slot, type, description, has_outputs=True, internally_connectable=None, multi_type=None, frontend_id=None, i2c=None, is_empty=False, input_name=None, supports_blind_scan=False, number_of_slots=0):
 		if not multi_type:
 			multi_type = {}
 		self.slot = slot
@@ -734,6 +734,7 @@ class NIM(object):
 
 		self.type = type
 		self.description = description
+		self.number_of_slots = number_of_slots
 		self.has_outputs = has_outputs
 		self.internally_connectable = internally_connectable
 		self.multi_type = multi_type
@@ -804,18 +805,17 @@ class NIM(object):
 
 	slot_input_name = property(getSlotInputName)
 
-	def getSlotName(self):
+	def getSlotName(self, slot=None):
 		# get a friendly description for a slot name.
 		# we name them "Tuner A/B/C/...", because that's what's usually written on the back
 		# of the device.
 		# for DM7080HD "Tuner A1/A2/B/C/..."
-		descr = _("Tuner ")
-		return descr + self.getSlotInputName()
+		return "%s%s" % (_("Tuner "), self.getSlotID(slot) if slot else self.getSlotInputName())
 
 	slot_name = property(getSlotName)
 
-	def getSlotID(self):
-		return chr(ord('A') + self.slot)
+	def getSlotID(self, slot=None):
+		return chr(ord("A") + (slot if slot is not None else self.slot))
 
 	def getI2C(self):
 		return self.i2c
@@ -860,7 +860,8 @@ class NIM(object):
 		return multistream
 
 	def isFBCTuner(self):
-		return (self.frontend_id is not None) and os.access("/proc/stb/frontend/%d/fbc_id" % self.frontend_id, os.F_OK)
+		# get FBC from description if proc not exists
+		return (self.description and "FBC" in self.description) or ((self.frontend_id is not None) and access("/proc/stb/frontend/%d/fbc_id" % self.frontend_id, F_OK))
 
 	def isFBCRoot(self):
 		return self.isFBCTuner() and (self.slot % 8 < (self.getType() == "DVB-C" and 1 or 2))
@@ -898,6 +899,9 @@ class NIM(object):
 
 	friendly_type = property(getFriendlyType)
 
+	def getFullDescription(self):
+		return self.empty and _("(empty)") or "%s (%s)" % (self.description, self.isSupported() and self.friendly_type or _("not supported"))
+
 	def getFriendlyFullDescription(self):
 		nim_text = self.slot_name + ": "
 
@@ -912,7 +916,17 @@ class NIM(object):
 				nim_text += self.description + " (" + self.friendly_type + ")"
 		return nim_text
 
+	def getFriendlyFullDescriptionCompressed(self):
+		if self.isFBCTuner():
+			return "%s-%s: %s" % (self.getSlotName(), self.getSlotID(self.slot + 7), self.getFullDescription())
+		# Compress by combining dual tuners by checking if the next tuner has a rf switch.
+		elif self.frontend_id is not None and self.number_of_slots > self.frontend_id + 1 and access("/proc/stb/frontend/%d/rf_switch" % (self.frontend_id + 1), F_OK):
+			return "%s-%s: %s" % (self.slot_name, self.getSlotID(self.slot + 1), self.getFullDescription())
+		return self.getFriendlyFullDescription()
+
+
 	friendly_full_description = property(getFriendlyFullDescription)
+	friendly_full_description_compressed = property(getFriendlyFullDescriptionCompressed)
 	config_mode_dvbs = property(lambda self: config.Nims[self.slot].dvbs.configMode.value)
 	config_mode_dvbt = property(lambda self: config.Nims[self.slot].dvbt.configMode.value)
 	config_mode_dvbc = property(lambda self: config.Nims[self.slot].dvbc.configMode.value)
@@ -1276,6 +1290,7 @@ class NimManager:
 				entries[current_slot]["name"] = _("N/A")
 				entries[current_slot]["isempty"] = True
 		nimfile.close()
+		self.number_of_slots = len(list(entries.keys()))
 
 		for id, entry in entries.items():
 			if not ("name" in entry and "type" in entry):
@@ -1302,7 +1317,7 @@ class NimManager:
 				entry["input_name"] = chr(ord('A') + id)
 			if "supports_blind_scan" not in entry:
 				entry["supports_blind_scan"] = False
-			self.nim_slots.append(NIM(slot=id, description=entry["name"], type=entry["type"], has_outputs=entry["has_outputs"], internally_connectable=entry["internally_connectable"], multi_type=entry["multi_type"], frontend_id=entry["frontend_device"], i2c=entry["i2c"], is_empty=entry["isempty"], input_name=entry.get("input_name", None), supports_blind_scan=entry["supports_blind_scan"]))
+			self.nim_slots.append(NIM(slot=id, description=entry["name"], type=entry["type"], has_outputs=entry["has_outputs"], internally_connectable=entry["internally_connectable"], multi_type=entry["multi_type"], frontend_id=entry["frontend_device"], i2c=entry["i2c"], is_empty=entry["isempty"], input_name=entry.get("input_name", None), supports_blind_scan=entry["supports_blind_scan"], number_of_slots=self.number_of_slots))
 
 	def hasNimType(self, chktype):
 		for slot in self.nim_slots:
@@ -1331,13 +1346,29 @@ class NimManager:
 
 	def getNimListOfType(self, type, exception=-1):
 		# returns a list of indexes for NIMs compatible to the given type, except for 'exception'
-		result = []
-		for x in self.nim_slots:
-			if x.isMultiType() and x.canBeCompatible(type) and x.slot != exception:
-				result.append(x.slot)
-			elif x.isCompatible(type) and x.slot != exception:
-				result.append(x.slot)
-		return result
+		return [x.slot for x in self.nim_slots if x.slot != exception and x.canBeCompatible(type)]
+
+	def getEnabledNimListOfType(self, type, exception=-1):
+		def enabled(n):
+			if n.slot != exception:
+				if type.startswith("DVB-S"):
+					nim = config.Nims[n.slot].dvbs
+				elif type.startswith("DVB-C"):
+					nim = config.Nims[n.slot].dvbc
+				elif type.startswith("DVB-T"):
+					nim = config.Nims[n.slot].dvbt
+				elif type.startswith("ATSC"):
+					nim = config.Nims[n.slot].atsc
+				else:
+					return False
+				if n.canBeCompatible(type) and nim and hasattr(nim, 'configMode') and nim.configMode.value != "nothing":
+					if type.startswith("DVB-S") and nim.configMode.value in ("loopthrough", "satposdepends"):
+						root_id = nimmanager.sec.getRoot(n.slot_id, int(nim.connectedTo.value))
+						if n.type == nimmanager.nim_slots[root_id].type:  # Check if connected from a DVB-S to DVB-S2 Nim or vice versa.
+							return False
+					return True
+			return False
+		return [x.slot for x in self.nim_slots if x.slot != exception and enabled(x)]
 
 	def __init__(self):
 		sec = secClass.getInstance()
@@ -1357,6 +1388,9 @@ class NimManager:
 		for slot in self.nim_slots:
 			result.append(slot.friendly_full_description)
 		return result
+
+	def nimListCompressed(self):
+		return [slot.friendly_full_description_compressed for slot in self.nim_slots if not (slot.isNotFirstFBCTuner() or slot.internally_connectable is not None)]
 
 	def getSlotCount(self):
 		return len(self.nim_slots)
@@ -1828,15 +1862,15 @@ def InitNimManager(nimmgr, update_slots=None):
 
 	positioner_mode_choices = [("usals", _("USALS")), ("manual", _("manual"))]
 
-	diseqc_satlist_choices = [(3600, _('automatic'), 1), (3601, _('nothing connected'), 1)] + nimmgr.satList
+	diseqc_satlist_choices = [(3600, _("automatic"), 1), (3601, _("nothing connected"), 1)] + nimmgr.satList
 
 	longitude_orientation_choices = [("east", _("East")), ("west", _("West"))]
 	latitude_orientation_choices = [("north", _("North")), ("south", _("South"))]
 	turning_speed_choices = [("fast", _("Fast")), ("slow", _("Slow")), ("fast epoch", _("Fast epoch"))]
 
 	advanced_satlist_choices = nimmgr.satList + [
-		(3601, _('All satellites 1 (USALS)'), 1), (3602, _('All satellites 2 (USALS)'), 1),
-		(3603, _('All satellites 3 (USALS)'), 1), (3604, _('All satellites 4 (USALS)'), 1), (3605, _('Selecting satellites 1 (USALS)'), 1), (3606, _('Selecting satellites 2 (USALS)'), 1)]
+		(3601, _("All satellites 1 (USALS)"), 1), (3602, _("All satellites 2 (USALS)"), 1),
+		(3603, _("All satellites 3 (USALS)"), 1), (3604, _("All satellites 4 (USALS)"), 1), (3605, _("Selecting satellites 1 (USALS)"), 1), (3606, _("Selecting satellites 2 (USALS)"), 1)]
 	advanced_lnb_choices = [("0", _("not configured"))] + [(str(y), "LNB " + str(y)) for y in list(range(1, (maxFixedLnbPositions + 1)))]
 	advanced_voltage_choices = [("polarization", _("Polarization")), ("13V", _("13 V")), ("18V", _("18 V"))]
 	advanced_tonemode_choices = [("band", _("Band")), ("on", _("On")), ("off", _("Off"))]
@@ -2078,7 +2112,7 @@ def InitNimManager(nimmgr, update_slots=None):
 		name = nimmgr.nim_slots[slot_id].description
 		if path.exists("/proc/stb/frontend/%d/use_scpc_optimized_search_range" % fe_id):
 			f = open("/proc/stb/frontend/%d/use_scpc_optimized_search_range" % fe_id, "w")
-			f.write(configElement.value)
+			f.write("1" if configElement.value else "0")
 			f.close()
 
 	def toneAmplitudeChanged(configElement):
@@ -2115,7 +2149,7 @@ def InitNimManager(nimmgr, update_slots=None):
 			nim.toneAmplitude.fe_id = x - empty_slots
 			nim.toneAmplitude.slot_id = x
 			nim.toneAmplitude.addNotifier(toneAmplitudeChanged)
-			nim.scpcSearchRange = ConfigSelection([("0", _("no")), ("1", _("yes"))], "0")
+			nim.scpcSearchRange = ConfigYesNo(False)
 			nim.scpcSearchRange.fe_id = x - empty_slots
 			nim.scpcSearchRange.slot_id = x
 			nim.scpcSearchRange.addNotifier(scpcSearchRangeChanged)

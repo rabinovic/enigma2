@@ -141,7 +141,7 @@ EDIT_BOUQUET = 1
 EDIT_ALTERNATIVES = 2
 
 
-def append_when_current_valid(current, menu, args, level=0, key=""):
+def append_when_current_valid(current, menu, args, level=0, key="dummy"):
 	if current and current.valid() and level <= config.usage.setup_level.index:
 		menu.append(ChoiceEntryComponent(key, args))
 
@@ -194,7 +194,7 @@ class ChannelContextMenu(Screen):
 		self.parentalControl = parentalControl
 		self.parentalControlEnabled = config.ParentalControl.servicepinactive.value
 
-		menu.append(ChoiceEntryComponent(text=(_("Settings..."), boundFunction(self.openSetup))))
+		menu.append(ChoiceEntryComponent(key="dummy", text=(_("Settings..."), boundFunction(self.openSetup))))
 		if not (current_sel_path or current_sel_flags & (eServiceReference.isDirectory | eServiceReference.isMarker)):
 			append_when_current_valid(current, menu, (_("show transponder info"), self.showServiceInformations), level=2)
 		if csel.bouquet_mark_edit == OFF and not csel.entry_marked:
@@ -277,7 +277,7 @@ class ChannelContextMenu(Screen):
 							append_when_current_valid(current, menu, (_("add bouquet to parental protection"), boundFunction(self.addParentalProtection, csel.getCurrentSelection())), level=0)
 						else:
 							append_when_current_valid(current, menu, (_("remove bouquet from parental protection"), boundFunction(self.removeParentalProtection, csel.getCurrentSelection())), level=0)
-					menu.append(ChoiceEntryComponent(text=(_("add bouquet"), self.showBouquetInputBox)))
+					menu.append(ChoiceEntryComponent(key="dummy", text=(_("add bouquet"), self.showBouquetInputBox)))
 					append_when_current_valid(current, menu, (_("rename entry"), self.renameEntry), level=0, key="2")
 					append_when_current_valid(current, menu, (_("remove entry"), self.removeEntry), level=0, key="8")
 					self.removeFunction = self.removeBouquet
@@ -292,7 +292,7 @@ class ChannelContextMenu(Screen):
 					append_when_current_valid(current, menu, (_("enable move mode"), self.toggleMoveMode), level=1, key="6")
 				if not csel.entry_marked and not inBouquetRootList and current_root and not (current_root.flags & eServiceReference.isGroup):
 					if current.type != -1:
-						menu.append(ChoiceEntryComponent(text=(_("add marker"), self.showMarkerInputBox)))
+						menu.append(ChoiceEntryComponent(key="dummy", text=(_("add marker"), self.showMarkerInputBox)))
 					if not csel.movemode:
 						if haveBouquets:
 							append_when_current_valid(current, menu, (_("enable bouquet edit"), self.bouquetMarkStart), level=0)
@@ -319,7 +319,7 @@ class ChannelContextMenu(Screen):
 				else:
 					append_when_current_valid(current, menu, (_("end alternatives edit"), self.bouquetMarkEnd), level=0)
 					append_when_current_valid(current, menu, (_("abort alternatives edit"), self.bouquetMarkAbort), level=0)
-		menu.append(ChoiceEntryComponent(text=(_("Reload Services"), self.reloadServices)))
+		menu.append(ChoiceEntryComponent(key="dummy", text=(_("Reload Services"), self.reloadServices)))
 		self["menu"] = ChoiceList(menu)
 
 	def set3DMode(self, value):
@@ -390,7 +390,7 @@ class ChannelContextMenu(Screen):
 		ref = self.csel.servicelist.getCurrent()
 		if self.removeFunction and ref and ref.valid():
 			if self.csel.confirmRemove:
-				list = [(_("yes"), True), (_("no"), False), (_("yes") + ", " + _("and never ask again this session again"), "never")]
+				list = [(_("Yes"), True), (_("No"), False), (_("Yes") + ", " + _("and never ask again this session again"), "never")]
 				self.session.openWithCallback(self.removeFunction, MessageBox, _("Are you sure to remove this entry?") + "\n%s" % self.getCurrentSelectionName(), list=list)
 			else:
 				self.removeFunction(True)
@@ -457,7 +457,7 @@ class ChannelContextMenu(Screen):
 
 	def openSetup(self):
 		from Screens.Setup import Setup
-		self.session.openWithCallback(self.cancelClick, Setup, "channelselection")
+		self.session.openWithCallback(self.cancelClick, Setup, "ChannelSelection")
 
 	def cancelClick(self, dummy=False):
 		self.close(False)
@@ -785,13 +785,13 @@ class ChannelSelectionEPG(InfoBarButtonSetup):
 		self["recordingactions"] = HelpableActionMap(self, "InfobarInstantRecord",
 			{
 				"ShortRecord": (self.RecordTimerQuestion, _("Add a record timer")),
-				'LongRecord': (self.doZapTimer, _('Add a zap timer for next event'))
+				"LongRecord": (self.doZapTimer, _("Add a zap timer for next event"))
 			}, -1)
-		self['dialogactions'] = ActionMap(['SetupActions'],
+		self["dialogactions"] = ActionMap(["SetupActions"],
 			{
-				'cancel': self.closeChoiceBoxDialog,
+				"cancel": self.closeChoiceBoxDialog,
 			})
-		self['dialogactions'].execEnd()
+		self["dialogactions"].execEnd()
 
 	def getKeyFunctions(self, key):
 		selection = eval("config.misc.ButtonSetup." + key + ".value.split(',')")
@@ -909,11 +909,11 @@ class ChannelSelectionEPG(InfoBarButtonSetup):
 			if timer.eit == eventid and ':'.join(timer.service_ref.ref.toString().split(':')[:11]) == refstr:
 				rt_func = lambda ret: self.removeTimer(timer)
 				if not next:
-					menu = [(_("Delete timer"), 'CALLFUNC', rt_func), (_("No"), 'CALLFUNC', self.closeChoiceBoxDialog)]
+					menu = [(_("Delete Timer"), 'CALLFUNC', rt_func), (_("No"), 'CALLFUNC', self.closeChoiceBoxDialog)]
 					title = _("Do you really want to remove the timer for %s?") % eventname
 				else:
 					cb_func2 = lambda ret: self.editTimer(timer)
-					menu = [(_("Delete timer"), 'CALLFUNC', self.RemoveTimerDialogCB, rt_func), (_("Edit timer"), 'CALLFUNC', self.RemoveTimerDialogCB, cb_func2)]
+					menu = [(_("Delete Timer"), 'CALLFUNC', self.RemoveTimerDialogCB, rt_func), (_("Edit Timer"), 'CALLFUNC', self.RemoveTimerDialogCB, cb_func2)]
 					title =_("Select action for timer %s:") % eventname
 				self.ChoiceBoxDialog = self.session.instantiateDialog(ChoiceBox, title=title, list=menu, keys=['red', 'green'], skin_name="RecordTimerQuestion")
 				self.setChoiceBoxDialogPosition()
@@ -1387,7 +1387,7 @@ class ChannelSelectionEdit:
 
 	def removeCurrentEntry(self, bouquet=False):
 		if self.confirmRemove:
-			list = [(_("yes"), True), (_("no"), False), (_("yes") + ", " + _("and never ask again this session again"), "never")]
+			list = [(_("Yes"), True), (_("No"), False), (_("Yes") + ", " + _("and never ask again this session again"), "never")]
 			self.session.openWithCallback(boundFunction(self.removeCurrentEntryCallback, bouquet), MessageBox, _("Are you sure to remove this entry?"), list=list)
 		else:
 			self.removeCurrentEntryCallback(bouquet, True)
@@ -1637,7 +1637,7 @@ class ChannelSelectionBase(Screen):
 #		pos = title.find(" (")
 #		if pos != -1:
 #			title = title[:pos]
-		title = _(' (TV)')
+		title = _(" (TV)")
 		self.setTitle(title)
 
 	def setRadioMode(self):
@@ -1648,7 +1648,7 @@ class ChannelSelectionBase(Screen):
 #		pos = title.find(" (")
 #		if pos != -1:
 #			title = title[:pos]
-		title = _(' (Radio)')
+		title = _(" (Radio)")
 		self.setTitle(title)
 
 	def setRoot(self, root, justSet=False):
@@ -1667,25 +1667,25 @@ class ChannelSelectionBase(Screen):
 
 	def removeModeStr(self, str):
 		if self.mode == MODE_TV:
-			pos = str.find(_(' (TV)'))
+			pos = str.find(_(" (TV)"))
 		else:
-			pos = str.find(_(' (Radio)'))
+			pos = str.find(_(" (Radio)"))
 		if pos != -1:
 			return str[:pos]
 		return str
 
 	def getServiceName(self, ref):
 		str = self.removeModeStr(ServiceReference(ref).getServiceName())
-		if 'User - bouquets' in str:
-			return _('User - bouquets')
+		if "User - bouquets" in str:
+			return _("User - bouquets")
 		if not str:
 			pathstr = ref.getPath()
-			if 'FROM PROVIDERS' in pathstr:
-				return _('Provider')
-			if 'FROM SATELLITES' in pathstr:
-				return _('Reception lists')
-			if ') ORDER BY name' in pathstr:
-				return _('All')
+			if "FROM PROVIDERS" in pathstr:
+				return _("Provider")
+			if "FROM SATELLITES" in pathstr:
+				return _("Reception lists")
+			if ") ORDER BY name" in pathstr:
+				return _("All")
 		return str
 
 	def buildTitleString(self):
@@ -2332,7 +2332,7 @@ class ChannelSelection(ChannelSelectionBase, ChannelSelectionEdit, ChannelSelect
 			if lastservice.valid() and self.getCurrentSelection() != lastservice:
 				self.setCurrentSelection(lastservice)
 
-			title += _(' (TV)')
+			title += _(" (TV)")
 		else:
 			# Mark PiP as active and effectively active pipzap
 			self.showPipzapMessage()
@@ -2341,7 +2341,7 @@ class ChannelSelection(ChannelSelectionBase, ChannelSelectionEdit, ChannelSelect
 			# Move to service playing in pip (will not work with subservices)
 			self.setCurrentSelection(self.session.pip.getCurrentService())
 
-			title += _(' (PiP)')
+			title += _(" (PiP)")
 		self.setTitle(title)
 		self.buildTitleString()
 

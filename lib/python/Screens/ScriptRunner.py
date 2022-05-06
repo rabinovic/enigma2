@@ -1,16 +1,11 @@
-from Plugins.Plugin import PluginDescriptor
 from Screens.Screen import Screen
 from Screens.Console import Console
 from Screens.MessageBox import MessageBox
-from Components.ActionMap import ActionMap, HelpableActionMap
+from Components.ActionMap import ActionMap
 from Components.Label import Label
 from Components.Button import Button
 from Components.MenuList import MenuList
-from Components.Sources.List import List
-from Tools.Directories import resolveFilename, SCOPE_PLUGINS
-from os import listdir, remove, mkdir, path, access, X_OK, chmod
-import datetime
-import time
+from os import listdir, mkdir, path, access, X_OK, chmod
 
 
 class ScriptRunner(Screen):

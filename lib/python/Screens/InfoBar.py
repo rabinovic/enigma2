@@ -22,7 +22,7 @@ boxtype = getBoxType()
 profile("LOAD:InfoBarGenerics")
 from Screens.InfoBarGenerics import InfoBarShowHide, \
 	InfoBarNumberZap, InfoBarChannelSelection, InfoBarMenu, InfoBarRdsDecoder, InfoBarRedButton, InfoBarTimerButton, InfoBarVmodeButton, \
-	InfoBarEPG, InfoBarSeek, InfoBarInstantRecord, InfoBarINFOpanel, InfoBarResolutionSelection, InfoBarAspectSelection, \
+	InfoBarEPG, InfoBarSeek, InfoBarInstantRecord, InfoBarResolutionSelection, InfoBarAspectSelection, \
 	InfoBarAudioSelection, InfoBarAdditionalInfo, InfoBarNotifications, InfoBarDish, InfoBarUnhandledKey, InfoBarLongKeyDetection, \
 	InfoBarSubserviceSelection, InfoBarShowMovies, \
 	InfoBarServiceNotifications, InfoBarPVRState, InfoBarCueSheetSupport, InfoBarSimpleEventView, InfoBarBuffer, \
@@ -43,7 +43,7 @@ from Screens.HelpMenu import HelpableScreen
 
 class InfoBar(InfoBarBase, InfoBarShowHide,
 	InfoBarNumberZap, InfoBarChannelSelection, InfoBarMenu, InfoBarEPG, InfoBarRdsDecoder,
-	InfoBarInstantRecord, InfoBarAudioSelection, InfoBarRedButton, InfoBarTimerButton, InfoBarINFOpanel, InfoBarResolutionSelection, InfoBarAspectSelection, InfoBarVmodeButton,
+	InfoBarInstantRecord, InfoBarAudioSelection, InfoBarRedButton, InfoBarTimerButton, InfoBarResolutionSelection, InfoBarAspectSelection, InfoBarVmodeButton,
 	HelpableScreen, InfoBarAdditionalInfo, InfoBarNotifications, InfoBarDish, InfoBarUnhandledKey, InfoBarLongKeyDetection,
 	InfoBarSubserviceSelection, InfoBarTimeshift, InfoBarSeek, InfoBarCueSheetSupport, InfoBarBuffer,
 	InfoBarSummarySupport, InfoBarTimeshiftState, InfoBarTeletextPlugin, InfoBarExtensions,
@@ -68,13 +68,13 @@ class InfoBar(InfoBarBase, InfoBarShowHide,
 			"openTimerList": (self.openTimerList, _("Open Timerlist")),
 			"openAutoTimerList": (self.openAutoTimerList, _("Open AutoTimerlist")),
 			"openEPGSearch": (self.openEPGSearch, _("Open EPGSearch")),
-			"openIMDB": (self.openIMDB, _("Open IMDB")),
+			"openIMDB": (self.openIMDB, _("Open IMDb")),
 			"showMC": (self.showMediaCenter, _("Show the media center")),
 			"openSleepTimer": (self.openSleepTimer, _("Show the Sleep Timer")),
 			"openPowerTimerList": (self.openPowerTimerList, _("Show the Power Timer")),
-			'ZoomInOut': (self.ZoomInOut, _('Zoom In/Out TV')),
-			'ZoomOff': (self.ZoomOff, _('Zoom Off')),
-			'HarddiskSetup': (self.HarddiskSetup, _('Select HDD')),
+			"ZoomInOut": (self.ZoomInOut, _("Zoom In/Out TV")),
+			"ZoomOff": (self.ZoomOff, _("Zoom Off")),
+			"HarddiskSetup": (self.HarddiskSetup, _("Select HDD")),
 			"showWWW": (self.showPORTAL, _("Open MediaPortal")),
 			"showSetup": (self.showSetup, _("Show setup")),
 			"showInformation": (self.showInformation, _("Show Information")),
@@ -94,7 +94,7 @@ class InfoBar(InfoBarBase, InfoBarShowHide,
 
 		for x in HelpableScreen, \
 				InfoBarBase, InfoBarShowHide, \
-				InfoBarNumberZap, InfoBarChannelSelection, InfoBarINFOpanel, InfoBarMenu, InfoBarEPG, InfoBarRdsDecoder, \
+				InfoBarNumberZap, InfoBarChannelSelection, InfoBarMenu, InfoBarEPG, InfoBarRdsDecoder, \
 				InfoBarInstantRecord, InfoBarAudioSelection, InfoBarRedButton, InfoBarTimerButton, InfoBarUnhandledKey, InfoBarLongKeyDetection, InfoBarResolutionSelection, InfoBarVmodeButton, \
 				InfoBarAdditionalInfo, InfoBarNotifications, InfoBarDish, InfoBarSubserviceSelection, InfoBarAspectSelection, InfoBarBuffer, \
 				InfoBarTimeshift, InfoBarSeek, InfoBarCueSheetSupport, InfoBarSummarySupport, InfoBarTimeshiftState, \
@@ -113,6 +113,9 @@ class InfoBar(InfoBarBase, InfoBarShowHide,
 		assert InfoBar.instance is None, "class InfoBar is a singleton class and just one instance of this class is allowed!"
 		InfoBar.instance = self
 
+		if config.usage.energyTimer.value:
+			self.setEnergyTimer(config.usage.energyTimer.value, showMessage=False)
+
 		if config.misc.initialchannelselection.value:
 			self.onShown.append(self.showMenu)
 
@@ -130,11 +133,7 @@ class InfoBar(InfoBarBase, InfoBarShowHide,
 	def doButtonsCheck(self):
 		if config.plisettings.ColouredButtons.value:
 			self["key_yellow"].setText(_("Search"))
-
-			if config.usage.defaultEPGType.value == "Graphical EPG..." or config.usage.defaultEPGType.value == "None":
-				self["key_red"].setText(_("Single EPG"))
-			else:
-				self["key_red"].setText(_("ViX EPG"))
+			self["key_red"].setText(_("Single EPG"))
 
 			if config.plisettings.Subservice.value == "0":
 				self["key_green"].setText(_("Timers"))
@@ -185,7 +184,7 @@ class InfoBar(InfoBarBase, InfoBarShowHide,
 			self.servicelist.showFavourites()
 
 	def showTvButton(self):
-		if boxtype.startswith('gb') or boxtype in ('classm', 'genius', 'evo', 'galaxym6', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988'):
+		if boxtype.startswith('gb') or boxtype in ('classm', 'genius', 'evo', 'galaxym6', 'sf8008', 'sf8008m', 'sf8008opt', 'sx988', 'og2ott4k', 'sfx6008'):
 			self.toogleTvRadio()
 		elif boxtype in ('uniboxhd1', 'uniboxhd2', 'uniboxhd3', 'sezam5000hd', 'mbtwin'):
 			self.showMovies()
@@ -278,8 +277,8 @@ class InfoBar(InfoBarBase, InfoBarShowHide,
 			self.session.open(MessageBox, _("The MediaCenter plugin is not installed!\nPlease install it."), type=MessageBox.TYPE_INFO, timeout=10)
 
 	def openSleepTimer(self):
-		from Screens.SleepTimerEdit import SleepTimerEdit
-		self.session.open(SleepTimerEdit)
+		from Screens.SleepTimer import SleepTimerButton
+		self.session.open(SleepTimerButton)
 
 	def openTimerList(self):
 		from Screens.TimerEdit import TimerEditList
