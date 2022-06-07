@@ -18,7 +18,7 @@ SystemInfo = {}
 class BoxInformation:  # To maintain data integrity class variables should not be accessed from outside of this class!
 	def __init__(self):
 		self.immutableList = []
-		self.boxInfo = {}
+		self.boxInfo = {"model": "dummy"}
 		self.enigmaInfoList = []
 		self.enigmaConfList = []
 		lines = fileReadLines(pathjoin(resolveFilename(SCOPE_LIBDIR), "enigma.info"), source=MODULE_NAME)

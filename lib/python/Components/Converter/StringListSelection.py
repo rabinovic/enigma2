@@ -7,6 +7,7 @@ class StringListSelection(Converter):
 
 	def __init__(self, args):
 		Converter.__init__(self, args)
+		self.current = None
 
 	def selChanged(self):
 		self.downstream_elements.changed((self.CHANGED_ALL, 0))

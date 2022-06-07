@@ -137,7 +137,7 @@ class PollReactor(posixbase.PosixReactorBase):
 
 		if self.waker is not None:
 			self.addReader(self.waker)
-		return result
+		return list(set(result) - self._internalReaders)
 
 	def doPoll(self, timeout,
 			   reads=reads,
@@ -150,7 +150,7 @@ class PollReactor(posixbase.PosixReactorBase):
 		"""Poll the poller for new events."""
 
 		if timeout is not None:
-			timeout = int(timeout * 1000) # convert seconds to milliseconds
+			timeout = int(timeout * 1000+1) # convert seconds to milliseconds
 
 		try:
 			l = poller.poll(timeout)
@@ -215,6 +215,9 @@ class PollReactor(posixbase.PosixReactorBase):
 		poller.eApp.interruptPoll()
 		return posixbase.PosixReactorBase.callLater(self, *args, **kwargs)
 
+	# override to not installSignalHandlers by default
+	def run(self, installSignalHandlers=False):
+		return posixbase.PosixReactorBase.run(self, installSignalHandlers)
 
 def install():
 	"""Install the poll() reactor."""
