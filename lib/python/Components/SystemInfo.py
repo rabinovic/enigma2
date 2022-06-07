@@ -391,7 +391,5 @@ SystemInfo["SmallFlash"] = BoxInfo.getItem("smallflash")
 SystemInfo["MiddleFlash"] = BoxInfo.getItem("middleflash") and not BoxInfo.getItem("smallflash")
 SystemInfo["HiSilicon"] = fileAccess("/usr/lib/hisilicon")
 SystemInfo["AmlogicFamily"] = fileAccess("/usr/bin/amlhalt") or fileAccess("/sys/module/amports")
-SystemInfo["ArchIsARM64"] = architecture == "aarch64" or "64" in architecture
-SystemInfo["ArchIsARM"] = architecture.startswith(("arm", "cortex"))
 SystemInfo["BoxName"] = GetBoxName()
 Refresh_SysSoftCam()
