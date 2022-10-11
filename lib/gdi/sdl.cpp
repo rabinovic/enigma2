@@ -75,7 +75,7 @@ void gSDLDC::exec(const gOpcode *o)
 	switch (o->opcode) {
 	case gOpcode::flush:
 		pushEvent(EV_FLIP);
-		eDebug("[gSDLDC] FLUSH");
+		//eDebug("[gSDLDC] FLUSH");
 		break;
 	default:
 		gDC::exec(o);
