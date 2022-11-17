@@ -266,7 +266,7 @@ void eDVBAdapterLinux::scanDevices()
 			if (ok)
 				m_frontend.push_back(ePtr<eDVBFrontend>(fe));
 		}
-		++num_fe;
+		++num_fe; // NOSONAR
 	}
 
 		// scan demux
@@ -1299,7 +1299,7 @@ RESULT eDVBResourceManager::allocateDemux(eDVBRegisteredFrontend *fe, ePtr<eDVBA
 			// attached to a frontend. That is, there
 			// should be one instance of dvr & demux
 			// devices more than of frontend devices.
-			// Otherwise, playback and timeshift might
+			// Otherwise, playback and time shift might
 			// interfere recording.
 			if (i->m_inuse)
 			{
