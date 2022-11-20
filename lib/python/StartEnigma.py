@@ -711,7 +711,6 @@ config.osd.language.addNotifier(localeNotifier)
 # These entries should be moved back to UsageConfig.py when it is safe to bring UsageConfig init to this location in StartEnigma.py.
 #
 config.crash = ConfigSubsection()
-config.crash.debugMultiBoot = ConfigYesNo(default=False)
 config.crash.debugActionMaps = ConfigYesNo(default=False)
 config.crash.debugKeyboards = ConfigYesNo(default=False)
 config.crash.debugOpkg = ConfigYesNo(default=False)
