@@ -402,10 +402,10 @@ def runScreenTest():
 	vol = VolumeControl(session)
 	profile("InitPowerKey")
 	power = PowerKey(session)
-	# if BoxInfo.getItem("VFDSymbols"):
-	# 	profile("VFDSYMBOLS")
-	# 	import Components.VfdSymbols
-	# 	Components.VfdSymbols.SymbolsCheck(session)
+	if BoxInfo.getItem("VFDSymbols"):
+		profile("VFDSYMBOLS")
+		import Components.VfdSymbols
+		Components.VfdSymbols.SymbolsCheck(session)
 	# We need session.scart to access it from within menu.xml.
 	session.scart = AutoScartControl(session)
 	profile("InitTrashcan")
@@ -661,26 +661,26 @@ except ImportError:
 
 profile("SystemInfo")
 from enigma import getE2Rev
-#from Components.SystemInfo import BoxInfo
+from Components.SystemInfo import BoxInfo
 
-BRAND = "xy" #BoxInfo.getItem("brand")
-BOX_TYPE = "zy" #BoxInfo.getItem("machinebuild")
-MODEL = "bla" #BoxInfo.getItem("model")
-DISPLAYBRAND = "bla" #BoxInfo.getItem("displaybrand")
+BRAND = BoxInfo.getItem("brand")
+BOX_TYPE = BoxInfo.getItem("machinebuild")
+MODEL = BoxInfo.getItem("model")
+DISPLAYBRAND = BoxInfo.getItem("displaybrand")
 
-# print("[StartEnigma] Receiver name = %s %s" % (DISPLAYBRAND, BoxInfo.getItem("displaymodel")))
-# print("[StartEnigma] %s version = %s" % (BoxInfo.getItem("displaydistro"), BoxInfo.getItem("imgversion")))
-# print("[StartEnigma] %s revision = %s" % (BoxInfo.getItem("displaydistro"), BoxInfo.getItem("imgrevision")))
-# print("[StartEnigma] Build Brand = %s" % BRAND)
-# print("[StartEnigma] Build Model = %s" % MODEL)
-# print("[StartEnigma] Platform = %s" % BoxInfo.getItem("platform"))
-# print("[StartEnigma] SoC family = %s" % BoxInfo.getItem("socfamily"))
-# print("[StartEnigma] Enigma2 revision = %s" % getE2Rev())
+print("[StartEnigma] Receiver name = %s %s" % (DISPLAYBRAND, BoxInfo.getItem("displaymodel")))
+print("[StartEnigma] %s version = %s" % (BoxInfo.getItem("displaydistro"), BoxInfo.getItem("imgversion")))
+print("[StartEnigma] %s revision = %s" % (BoxInfo.getItem("displaydistro"), BoxInfo.getItem("imgrevision")))
+print("[StartEnigma] Build Brand = %s" % BRAND)
+print("[StartEnigma] Build Model = %s" % MODEL)
+print("[StartEnigma] Platform = %s" % BoxInfo.getItem("platform"))
+print("[StartEnigma] SoC family = %s" % BoxInfo.getItem("socfamily"))
+print("[StartEnigma] Enigma2 revision = %s" % getE2Rev())
 
-# if BoxInfo.getItem("architecture") in ("aarch64"):
-# 	import usb.core
-# 	import usb.backend.libusb1
-# 	usb.backend.libusb1.get_backend(find_library=lambda x: "/lib64/libusb-1.0.so.0")
+if BoxInfo.getItem("architecture") in ("aarch64"):
+	import usb.core
+	import usb.backend.libusb1
+	usb.backend.libusb1.get_backend(find_library=lambda x: "/lib64/libusb-1.0.so.0")
 
 from traceback import print_exc
 from Components.config import config, ConfigYesNo, ConfigSubsection, ConfigInteger, ConfigText, ConfigOnOff, ConfigSelection

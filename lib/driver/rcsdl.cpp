@@ -87,7 +87,7 @@ int eSDLInputDevice::translateKey(SDL_Keycode key)
 	P2(RETURN,ENTER);
 	P(PAUSE);
 	P2(ESCAPE,ESC);
-	P2(SPACE,MENU);
+	P(SPACE);
 #if 0
 	P(EXCLAIM);
 	P(QUOTEDBL);
