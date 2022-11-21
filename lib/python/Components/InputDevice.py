@@ -2,6 +2,7 @@ from fcntl import ioctl
 from os import O_NONBLOCK, O_RDWR, close as osclose, listdir, open as osopen, write as oswrite
 from os.path import isdir, isfile
 from platform import machine
+from boxbranding import getBoxType, getBrandOEM
 from struct import pack
 
 from enigma import eRCInput
@@ -62,8 +63,8 @@ class InputDevices:
 				}
 
 				# load default remote control "delay" and "repeat" values for ETxxxx ("QuickFix Scrollspeed Menues" proposed by Xtrend Support)
-				if BoxInfo.getItem("machinebuild").startswith('et'):
-					self.setDeviceDefaults(device)
+				if getBoxType().startswith('et'):
+					self.setDeviceDefaults(device) 
 
 	def EVIOCGNAME(self, length):
 		# include/uapi/asm-generic/ioctl.h
@@ -124,7 +125,7 @@ class InputDevices:
 		# print "[InputDevices] setDeviceName for device %s to %s" % (device,value)
 		self.setDeviceAttribute(device, "configuredName", value)
 
-	def setDeviceDelay(self, device, value):  # REP_DELAY
+	def setDeviceDelay(self, device, value): # REP_DELAY
 		if self.getDeviceAttribute(device, "enabled"):
 			# print("[InputDevices] setDeviceDelay for device %s to %d ms" % (device, value))
 			event = pack("LLHHi", 0, 0, 0x14, 0x00, int(value))
@@ -132,7 +133,7 @@ class InputDevices:
 			oswrite(fd, event)
 			osclose(fd)
 
-	def setDeviceRepeat(self, device, value):  # REP_PERIOD
+	def setDeviceRepeat(self, device, value): # REP_PERIOD
 		if self.getDeviceAttribute(device, "enabled"):
 			# print("[InputDevices] setDeviceRepeat for device %s to %d ms" % (device, value))
 			event = pack("LLHHi", 0, 0, 0x14, 0x01, int(value))
@@ -200,11 +201,13 @@ class Keyboard:
 		# locale = language.getLocale()
 		# if locale.startswith("de_") and "de.kmap" in self.keyboardMaps:
 		# 	return "de.kmap"
-		if BoxInfo.getItem("displaybrand") in ("Zgemma", "Atto.TV"):
+		from boxbranding import getMachineBrand
+		if getMachineBrand() in ("Zgemma", "Atto.TV"):
 			return "us.kmap"
-		elif BoxInfo.getItem("displaybrand") == "Beyonwiz":
+		elif getMachineBrand() == "Beyonwiz":
 			return "eng.kmap"
 		return "de.kmap"
+
 
 
 class RemoteControl:
@@ -318,7 +321,7 @@ class RemoteControl:
 		if rcType > 0:
 			fileWriteLine("/proc/stb/ir/rc/type", rcType, source=MODULE_NAME)
 
-	def getOpenWebifHTML(self):
+	def getOpenWebIfHTML(self):
 		html = []
 		error = False
 		image = self.remote["image"]
@@ -367,9 +370,9 @@ class InitInputDevices:
 		configItem.enabled.addNotifier(self.inputDevicesEnabledChanged)
 		configItem.name = ConfigText(default="")
 		configItem.name.addNotifier(self.inputDevicesNameChanged)
-		configItem.repeat = ConfigSlider(default=BoxInfo.getItem("RemoteRepeat", 100), increment=10, limits=(0, 500))
+		configItem.repeat = ConfigSlider(default=BoxInfo.getItem("RemoteRepeat", 100), increment = 10, limits=(0, 500))
 		configItem.repeat.addNotifier(self.inputDevicesRepeatChanged)
-		configItem.delay = ConfigSlider(default=BoxInfo.getItem("RemoteDelay", 700), increment=100, limits=(0, 5000))
+		configItem.delay = ConfigSlider(default=BoxInfo.getItem("RemoteDelay", 700), increment = 100, limits=(0, 5000))
 		configItem.delay.addNotifier(self.inputDevicesDelayChanged)
 
 	def inputDevicesEnabledChanged(self, configElement):
@@ -404,12 +407,12 @@ class InitInputDevices:
 
 
 inputDevices = InputDevices()
-iInputDevices = inputDevices  # Deprecated support old plugins
+iInputDevices = inputDevices # Deprecated support old plugins
 
 
 class RcTypeControl():
 	def __init__(self):
-		if pathExists('/proc/stb/ir/rc/type') and BoxInfo.getItem("brand") not in ('gigablue', 'odin', 'ini', 'entwopia', 'tripledot'):
+		if pathExists('/proc/stb/ir/rc/type') and getBrandOEM() not in ('gigablue', 'odin', 'ini', 'entwopia', 'tripledot'):
 			self.isSupported = True
 
 			if config.plugins.remotecontroltype.rctype.value != 0:

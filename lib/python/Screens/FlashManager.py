@@ -1,6 +1,6 @@
 from json import load
 from os import W_OK, access, listdir, major, makedirs, minor, mkdir, sep, stat, statvfs, unlink, walk
-from os.path import basename, exists, isdir, isfile, islink, ismount, splitext, join as pathjoin
+from os.path import exists, isdir, isfile, islink, ismount, splitext, join as pathjoin
 from shutil import rmtree
 from time import time
 from urllib.request import urlopen, Request
@@ -14,7 +14,7 @@ from Components.config import config
 from Components.Console import Console
 from Components.Label import Label
 from Components.ProgressBar import ProgressBar
-from Components.SystemInfo import BoxInfo, getBoxDisplayName
+from Components.SystemInfo import BoxInfo
 from Components.Sources.StaticText import StaticText
 from Plugins.SystemPlugins.SoftwareManager.BackupRestore import BackupScreen
 from Screens.HelpMenu import HelpableScreen
@@ -31,7 +31,7 @@ FEED_JSON_URL = 1
 FEED_BOX_IDENTIFIER = 2
 
 FEED_URLS = [
-	("openATV", "https://images.mynonpublic.com/openatv/json/%s", "BoxName"),
+	("openATV", "http://images.mynonpublic.com/openatv/json/%s", "BoxName"),
 	("OpenBH", "https://images.openbh.net/json/%s", "model"),
 	("OpenPLi", "http://downloads.openpli.org/json/%s", "model"),
 	("Open Vision", "https://images.openvision.dedyn.io/json/%s", "model"),
@@ -108,11 +108,11 @@ class FlashManager(Screen, HelpableScreen):
 			return result[0] if result else None
 
 		def getImages(path, files):
-			for file in [x for x in files if splitext(x)[1] == ".zip" and not basename(x).startswith(".") and self.box in x]:
+			for file in [x for x in files if splitext(x)[1] == ".zip" and self.box in x]:
 				try:
-					zipData = ZipFile(file, mode="r")
-					zipFiles = zipData.namelist()
-					zipData.close()
+					zip = ZipFile(file, mode="r")  # ZipFile.open(name, mode="r", pwd=None, force_zip64=False)
+					zipFiles = zip.namelist()
+					zip.close
 					if checkImageFiles([x.split(sep)[-1] for x in zipFiles]):
 						imageType = _("Downloaded images")
 						if "backup" in file.split(sep)[-1]:
@@ -129,7 +129,7 @@ class FlashManager(Screen, HelpableScreen):
 		if not self.imagesList:
 			index = findInList(self.imageFeed)
 			if index is None:
-				feedURL = "https://images.mynonpublic.com/openatv/json/%s"
+				feedURL = "http://images.mynonpublic.com/openatv/json/%s"
 				boxInfoField = "BoxName"
 			else:
 				feedURL = FEED_URLS[index][FEED_JSON_URL]
@@ -186,9 +186,8 @@ class FlashManager(Screen, HelpableScreen):
 		else:
 			self.session.openWithCallback(self.getImagesListCallback, MessageBox, _("Error: Cannot find any images!"), type=MessageBox.TYPE_ERROR, timeout=3, windowTitle=self.getTitle())
 
-	def getImagesListCallback(self, retVal=None):  # The retVal argument absorbs the unwanted return value from MessageBox.
-		if self.imageFeed != "openATV":
-			self.keyDistributionCallback("openATV")  # No images can be found for the selected distribution so go back to the openATV default.
+	def getImagesListCallback(self, retVal=None):  # The retVal argument absorbs the inappropriate return value from MessageBox.
+		self.keyDistributionCallback("openATV")  # No images can be found for the selected distribution so go back to the openATV default.
 
 	def keyCancel(self):
 		self.close()
@@ -385,13 +384,10 @@ class FlashImage(Screen, HelpableScreen):
 				mounts.sort(key=lambda x: x[1], reverse=True)
 				return ((devices[0][1] > 500 and (devices[0][0], True)) if devices else mounts and mounts[0][1] > 500 and (mounts[0][0], False)) or (None, None)
 
-			if "backup" not in str(choice):
+			if "backup" not in str(choice) and "openatv" in self.imageName:
 				if MultiBoot.canMultiBoot():
 					self.slotCode = choice[0]
-				if BoxInfo.getItem("distro") in self.imageName:
-					self.session.openWithCallback(self.backupQuestionCallback, MessageBox, _("Do you want to backup settings?"), default=True, timeout=10, windowTitle=self.getTitle())
-				else:
-					self.backupQuestionCallback(None)
+				self.session.openWithCallback(self.backupQuestionCallback, MessageBox, _("Do you want to backup settings?"), default=True, timeout=10, windowTitle=self.getTitle())
 				return
 			destination, isDevice = findMedia(["/media/hdd", "/media/usb"])
 			if destination:
@@ -429,28 +425,18 @@ class FlashImage(Screen, HelpableScreen):
 	def flashPostAction(self, retVal=True):
 		if retVal:
 			self.recordCheck = False
-			text = _("Please select what to do after flash of the following image:")
-			text = "%s\n%s" % (text, self.imageName)
-			if BoxInfo.getItem("distro") in self.imageName:
+			text = _("Please select what to do:")
+			if "openatv" in self.imageName:
 				if exists("/media/hdd/images/config/myrestore.sh"):
 					text = "%s\n%s" % (text, _("(The file '/media/hdd/images/config/myrestore.sh' exists and will be run after the image is flashed.)"))
 				choices = [
-					(_("Upgrade (Flash & restore all)"), "restoresettingsandallplugins"),
+					(_("Upgrade (Backup, flash & restore all)"), "restoresettingsandallplugins"),
 					(_("Clean (Just flash and start clean)"), "wizard"),
-					(_("Flash and restore settings and no plugins"), "restoresettingsnoplugin"),
-					(_("Flash and restore settings and selected plugins (Ask user)"), "restoresettings"),
+					(_("Backup, flash and restore settings and no plugins"), "restoresettingsnoplugin"),
+					(_("Backup, flash and restore settings and selected plugins (Ask user)"), "restoresettings"),
 					(_("Do not flash image"), "abort")
 				]
 				default = self.selectPrevPostFlashAction()
-				if "backup" in self.imageName:
-					choices = [
-						(_("Only Flash Backup Image"), "nothing"),
-						# (_("Flash & restore all"), "restoresettingsandallplugins"),
-						# (_("Flash and restore settings and no plugins"), "restoresettingsnoplugin"),
-						# (_("Flash and restore settings and selected plugins (Ask user)"), "restoresettings"),
-						(_("Do not flash image"), "abort")
-					]
-					default = 0
 			else:
 				choices = [
 					(_("Clean (Just flash and start clean)"), "wizard"),
@@ -480,7 +466,7 @@ class FlashImage(Screen, HelpableScreen):
 				nextRecordingTime = self.session.nav.RecordTimer.getNextRecordingTime()
 				if recording or (nextRecordingTime > 0 and (nextRecordingTime - time()) < 360):
 					self.choice = choice
-					self.session.openWithCallback(self.recordWarning, MessageBox, "%s\n\n%s" % (_("Recording(s) are in progress or coming up in few seconds!"), _("Flash your %s %s and reboot now?") % getBoxDisplayName()), default=False, windowTitle=self.getTitle())
+					self.session.openWithCallback(self.recordWarning, MessageBox, "%s\n\n%s" % (_("Recording(s) are in progress or coming up in few seconds!"), _("Flash your %s %s and reboot now?") % (BoxInfo.getItem("displaybrand"), BoxInfo.getItem("displaymodel"))), default=False, windowTitle=self.getTitle())
 					return
 			restoreSettings = ("restoresettings" in choice)
 			restoreSettingsnoPlugin = (choice == "restoresettingsnoplugin")
@@ -559,13 +545,13 @@ class FlashImage(Screen, HelpableScreen):
 	def downloadProgress(self, current, total):
 		self["progress"].setValue(100 * current // total)
 
-	def downloadEnd(self, filename=None):
+	def downloadEnd(self):
 		self.downloader.stop()
 		self.unzip()
 
-	def downloadError(self, error):
+	def downloadError(self, reason, status):
 		self.downloader.stop()
-		self.session.openWithCallback(self.keyCancel, MessageBox, "%s\n\n%s" % (_("Error downloading image '%s'!") % self.imageName, error.strerror), type=MessageBox.TYPE_ERROR, windowTitle=self.getTitle())
+		self.session.openWithCallback(self.keyCancel, MessageBox, "%s\n\n%s" % (_("Error downloading image '%s'!") % self.imageName, reason), type=MessageBox.TYPE_ERROR, windowTitle=self.getTitle())
 
 	def unzip(self):
 		self["header"].setText(_("Unzipping Image"))
@@ -578,12 +564,11 @@ class FlashImage(Screen, HelpableScreen):
 
 	def startUnzip(self):
 		try:
-			zipData = ZipFile(self.zippedImage, mode="r")
-			zipData.extractall(self.unzippedImage)  # NOSONAR
-			zipData.close()
+			zip = ZipFile(self.zippedImage, "r")  # class ZipFile(file, mode="r", compression=ZIP_STORED, allowZip64=True, compresslevel=None, strict_timestamps=True)
+			zip.extractall(self.unzippedImage)  # ZipFile.extractall(path=None, members=None, pwd=None)
+			zip.close()
 			self.flashImage()
-		except Exception as err:
-			print("[FlashManager] startUnzip Error: %s!" % str(err))
+		except:
 			self.session.openWithCallback(self.keyCancel, MessageBox, _("Error unzipping image '%s'!") % self.imageName, type=MessageBox.TYPE_ERROR, windowTitle=self.getTitle())
 
 	def flashImage(self):

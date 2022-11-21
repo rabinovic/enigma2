@@ -16,6 +16,8 @@ from os.path import ismount, exists
 from time import localtime
 from datetime import date
 
+plugin_path = ""
+
 # FIXME: harddiskmanager has a better overview about available mointpoints!
 BackupPath = {
 		"mtd": "/media/backup",
@@ -69,6 +71,7 @@ class BackupSetup(Screen):
 
 	def __init__(self, session, args=None):
 		Screen.__init__(self, session)
+		self.skin_path = plugin_path
 
 		self["oktext"] = Label(_("OK"))
 		self["canceltext"] = Label(_("Cancel"))
@@ -156,6 +159,7 @@ class RestoreMenu(Screen):
 
 	def __init__(self, session, backup):
 		Screen.__init__(self, session)
+		self.skin_path = plugin_path
 		self.backup = backup
 
 		self["canceltext"] = Label(_("Cancel"))
@@ -219,4 +223,6 @@ def BackupMain(session, **kwargs):
 
 
 def Plugins(path, **kwargs):
+	global plugin_path
+	plugin_path = path
 	return PluginDescriptor(name="Backup/Restore", description="Backup and Restore your Settings", icon="backup.png", where=PluginDescriptor.WHERE_PLUGINMENU, fnc=BackupMain)

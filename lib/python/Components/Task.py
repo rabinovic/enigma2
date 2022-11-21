@@ -450,7 +450,7 @@ class JobManager:
 #
 #class CreateFilesystemTask(Task):
 #	def __init__(self, device, partition = 1, largefile = True):
-#		Task.__init__(self, "Creating file system")
+#		Task.__init__(self, "Creating filesystem")
 #		self.setTool("/sbin/mkfs.ext")
 #		if largefile:
 #			self.args += ["-T", "largefile"]

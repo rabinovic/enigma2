@@ -1,13 +1,13 @@
 #include <lib/gui/eslider.h>
 
-int eSlider::defaultSliderBorderWidth = eSlider::DefaultBorderWidth;
+int eSlider::DefaultSliderBorderWidth = 0;
 
 eSlider::eSlider(eWidget *parent)
-	:eWidget(parent), m_have_border_color(false), m_have_foreground_color(false), m_have_background_color(false), m_scrollbar(false), m_pixel_mode(false),
+	:eWidget(parent), m_have_border_color(false), m_have_foreground_color(false),
 	m_min(0), m_max(0), m_value(0), m_start(0), m_orientation(orHorizontal), m_orientation_swapped(0),
-	m_border_width(0)
+	m_border_width(0), m_scrollbar(false)
 {
-	m_border_width = eSlider::defaultSliderBorderWidth;
+	m_border_width = eSlider::DefaultSliderBorderWidth;
 }
 
 void eSlider::setIsScrollbar()
@@ -37,9 +37,9 @@ void eSlider::setBackgroundPixmap(gPixmap *pixmap)
 	invalidate();
 }
 
-void eSlider::setBorderWidth(int width)
+void eSlider::setBorderWidth(int pixel)
 {
-	m_border_width=width;
+	m_border_width=pixel;
 	invalidate();
 }
 
@@ -54,13 +54,6 @@ void eSlider::setForegroundColor(const gRGB &color)
 {
 	m_foreground_color = color;
 	m_have_foreground_color = true;
-	invalidate();
-}
-
-void eSlider::setBackgroundColor(const gRGB &color)
-{
-	m_background_color = color;
-	m_have_background_color = true;
 	invalidate();
 }
 
@@ -80,20 +73,19 @@ int eSlider::event(int event, void *data, void *data2)
 
 		eSize s(size());
 		getStyle(style);
-		/* paint background */
+			/* paint background */
 		eWidget::event(evtPaint, data, data2);
 
 		gPainter &painter = *(gPainter*)data2;
+
 
 		if (m_backgroundpixmap)
 		{
 			painter.blit(m_backgroundpixmap, ePoint(0, 0), eRect(), isTransparent() ? gPainter::BT_ALPHATEST : 0);
 		}
-		else if(m_have_background_color) {
-			painter.setBackgroundColor(m_background_color);
-			painter.clear();
-		}
 
+		// TODO : do we need this here if m_pixmap is not null
+		// TODO : check why background color not working
 		style->setStyle(painter, m_scrollbar ? eWindowStyle::styleScollbar : eWindowStyle::styleSlider );
 
 		if (!m_pixmap)
@@ -105,7 +97,8 @@ int eSlider::event(int event, void *data, void *data2)
 		else
 			painter.blit(m_pixmap, ePoint(0, 0), m_currently_filled.extends, isTransparent() ? gPainter::BT_ALPHATEST : 0);
 
-		// Border
+// border
+
 		if(m_border_width>0) {
 
 			if (m_have_border_color)
@@ -127,27 +120,16 @@ int eSlider::event(int event, void *data, void *data2)
 		int num_pix = 0, start_pix = 0;
 		gRegion old_currently_filled = m_currently_filled;
 
-		// calculate the pixel size of the thumb
-		int offset = m_border_width * 2;
-		int pixsize = (m_orientation == orHorizontal) ? size().width()-offset : size().height()-offset;
+		int pixsize = (m_orientation == orHorizontal) ? size().width() : size().height();
 
 		if (m_min < m_max)
 		{
 			int val_range = m_max - m_min;
-			if(m_pixel_mode) {
-				// don't round
-				start_pix = m_start + m_border_width;
-				num_pix = m_value - m_start + m_border_width;
-			}
-			else {
-				// calculate the start_pix and num_pix with correct scaling and repective borderwidth
-				start_pix = (m_start * pixsize / val_range) + m_border_width;
-				num_pix = (m_value * pixsize / val_range) + m_border_width - start_pix;
-			}
+			num_pix = (pixsize * (m_value - m_start) + val_range - 1) / val_range; /* properly round up */
+			start_pix = (pixsize * m_start + val_range - 1) / val_range;
 
 			if (m_orientation_swapped)
 				start_pix = pixsize - num_pix - start_pix;
-
 		}
 
 		if  (start_pix < 0)
@@ -160,13 +142,13 @@ int eSlider::event(int event, void *data, void *data2)
 			num_pix = 0;
 
 		if (m_orientation == orHorizontal)
-			m_currently_filled = eRect(start_pix, m_border_width, num_pix, pixsize);
+			m_currently_filled = eRect(start_pix, 0, num_pix, pixsize);
 		else
-			m_currently_filled = eRect(m_border_width, start_pix, pixsize, num_pix);
+			m_currently_filled = eRect(0, start_pix, pixsize, num_pix);
 
-		// redraw what *was* filled before and now isn't.
+			// redraw what *was* filled before and now isn't.
 		invalidate(m_currently_filled - old_currently_filled);
-		// redraw what wasn't filled before and is now.
+			// redraw what wasn't filled before and is now.
 		invalidate(old_currently_filled - m_currently_filled);
 
 		return 0;
@@ -182,9 +164,8 @@ void eSlider::setValue(int value)
 	event(evtChangedSlider);
 }
 
-void eSlider::setStartEnd(int start, int end, bool pixel)
+void eSlider::setStartEnd(int start, int end)
 {
-	m_pixel_mode = pixel;
 	m_value = end;
 	m_start = start;
 	event(evtChangedSlider);
@@ -202,45 +183,4 @@ void eSlider::setRange(int min, int max)
 	m_min = min;
 	m_max = max;
 	event(evtChangedSlider);
-}
-
-// Mapping Functions
-void eSlider::setScrollbarForegroundPixmap(ePtr<gPixmap> &pixmap)
-{
-	setPixmap(pixmap.operator->());
-}
-
-void eSlider::setScrollbarForegroundPixmap(gPixmap *pixmap)
-{
-	setPixmap(pixmap);
-}
-
-void eSlider::setScrollbarBackgroundPixmap(ePtr<gPixmap> &pixmap)
-{
-	setBackgroundPixmap(pixmap.operator->());
-}
-
-void eSlider::setScrollbarBackgroundPixmap(gPixmap *pixmap)
-{
-	setBackgroundPixmap(pixmap);
-}
-
-void eSlider::setScrollbarBorderWidth(int width)
-{
-	setBorderWidth(width);
-}
-
-void eSlider::setScrollbarBorderColor(const gRGB &color)
-{
-	setBorderColor(color);
-}
-
-void eSlider::setScrollbarForegroundColor(const gRGB &color)
-{
-	setForegroundColor(color);
-}
-
-void eSlider::setScrollbarBackgroundColor(const gRGB &color)
-{
-	setBackgroundColor(color);
 }

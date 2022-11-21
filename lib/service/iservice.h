@@ -444,7 +444,7 @@ public:
 	virtual ePtr<iServiceInfoContainer> getInfoObject(int w);
 	virtual ePtr<iDVBTransponderData> getTransponderData();
 	virtual void getAITApplications(std::map<int, std::string> &aitlist) {};
-	virtual PyObject *getHbbTVApplications() {return getHbbTVApplications();};  // NOSONAR
+	virtual PyObject *getHbbTVApplications() {return getHbbTVApplications();};
 	virtual void getCaIds(std::vector<int> &caids, std::vector<int> &ecmpids, std::vector<std::string> &ecmdatabytes);
 	virtual long long getFileSize();
 
@@ -662,7 +662,7 @@ public:
 
 	virtual int isTimeshiftActive()=0;
 	virtual int isTimeshiftEnabled()=0;
-			/* this essentially seeks to the relative end of the time shift buffer */
+			/* this essentially seeks to the relative end of the timeshift buffer */
 	virtual RESULT activateTimeshift()=0;
 	virtual RESULT saveTimeshiftFile()=0;
 	virtual std::string getTimeshiftFilename()=0;

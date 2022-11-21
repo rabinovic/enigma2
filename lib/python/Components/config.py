@@ -343,7 +343,7 @@ class choicesList():
 			elif isinstance(choices, dict):
 				self.type = choicesList.TYPE_DICT
 			else:
-				raise TypeError("[Config] Error: Choices must be a dictionary or a list!")
+				raise TypeError("[Config] Error: Choices must be dict or list!")
 		else:
 			self.type = type
 		# print("[Config] choicesList DEBUG: Choices=%s." % choices)
@@ -399,7 +399,7 @@ class choicesList():
 			if isinstance(default, tuple):
 				default = default[0]
 		else:
-			default = list(choices.keys())[0]
+			default = list(choices.keys())[0]  # Shouldn't this be a single item?
 		return default
 
 	def index(self, value):
@@ -408,7 +408,8 @@ class choicesList():
 		except (ValueError, IndexError):  # Occurs, for example, when default is not in list.
 			return 0  # DEBUG: Is it appropriate to return the first item if the index is invalid?
 
-	def updateItemDescription(self, index, descr):  # This is only used in nimmanager.py / connectedToChanged.
+	# only used in nimmanager.py / connectedToChanged
+	def updateItemDescription(self, index, descr):
 		if self.type == choicesList.TYPE_LIST:
 			orig = self.choices[index]
 			if isinstance(orig, tuple):
@@ -416,7 +417,6 @@ class choicesList():
 		else:
 			key = list(self.choices.keys())[index]
 			self.choices[key] = descr
-
 
 class descriptionsList(choicesList):
 	def __getitem__(self, index):
@@ -485,7 +485,7 @@ class ConfigBoolean(ConfigElement):
 		self.value = default
 		self.descriptions = descriptions
 		self.graphic = graphic
-		self.trueValues = ("1", "enable", "enabled", "on", "true", "yes")
+		self.trueValues = ("1", "enabled", "on", "true", "yes")
 
 	def handleKey(self, key, callback=None):
 		prev = self.value
@@ -605,13 +605,13 @@ class ConfigDictionarySet(ConfigElement):
 		self.dirs = self.value
 
 	def save(self):
-		delKeys = []
+		del_keys = []
 		for key in self.dirs:
 			if not len(self.dirs[key]):
-				delKeys.append(key)
-		for delKey in delKeys:
+				del_keys.append(key)
+		for del_key in del_keys:
 			try:
-				del self.dirs[delKey]
+				del self.dirs[del_key]
 			except KeyError:
 				pass
 			self.changed()
@@ -665,6 +665,9 @@ class ConfigDictionarySet(ConfigElement):
 			if callable(self.callback):
 				self.callback()
 
+	def getKeys(self):
+		return self.dir_pathes
+
 
 # This is the control, and base class, for location settings.
 #
@@ -690,7 +693,7 @@ class ConfigLocations(ConfigElement):
 
 	def load(self):
 		ConfigElement.load(self)
-		self.loadValue = list(dict.fromkeys(self.loadValue))  # Remove any duplicated entries.
+		self.loadValue = list(set(self.loadValue))  # Remove any duplicated entries.
 		self.locations = [[x, None, False] for x in self.loadValue]
 		self.refreshMountPoints()
 		for location in self.locations:
@@ -743,8 +746,8 @@ class ConfigLocations(ConfigElement):
 		self.checkChangedMountPoints()
 		return [x[0] for x in self.locations if x[2]]
 
-	def setValue(self, value):  # Do not sort the locations here, this should be done as required in the UI.
-		value = list(dict.fromkeys(value))  # Remove any duplicated entries.
+	def setValue(self, value):
+		value = list(set(value))  # Remove any duplicated entries.
 		newLocations = []
 		for location in self.locations:
 			if location[0] in value:
@@ -752,6 +755,7 @@ class ConfigLocations(ConfigElement):
 				value.remove(location[0])
 		for location in value:
 			newLocations.append([location, self.getMountPoint(location), fileAccess(location)])
+		newLocations.sort(key=lambda x: x[0])
 		if newLocations != self.locations:
 			self.locations = newLocations
 			self.changed()
@@ -798,7 +802,7 @@ class ConfigLocations(ConfigElement):
 
 # This is the control, and base class, for selection list settings.
 #
-# ConfigSelection is a "one of ..."-type.  It has the "choices", usually
+# ConfigSelection is a "one of.."-type.  It has the "choices", usually
 # a list, which contains (id, desc)-tuples (or just only the ids, in
 # case str(id) will be used as description).
 #
@@ -873,12 +877,6 @@ class ConfigSelection(ConfigElement):
 	def toDisplayString(self, val):
 		return self.description[val]
 
-	def getChoices(self):
-		return self.choices.__list__()
-
-	def getDescriptions(self):
-		return self.description.__list__()
-
 	def setChoices(self, choices, default=None):
 		value = self.value
 		self.choices = choicesList(choices)
@@ -927,43 +925,59 @@ class ConfigNothing(ConfigSelection):
 		ConfigSelection.__init__(self, choices=[("", "")])
 
 
-class ConfigSatellite(ConfigSelection):
-	def __init__(self, choices, default=None):
-		ConfigSelection.__init__(self, choices=[(orbpos, desc) for (orbpos, desc, flags) in choices], default=default)
+class ConfigSatlist(ConfigSelection):
+	def __init__(self, list, default=None):
+		if default is not None:
+			default = str(default)
+		ConfigSelection.__init__(self, choices=[(str(orbpos), desc) for (orbpos, desc, flags) in list], default=default)
 
 	def getOrbitalPosition(self):
-		return None if self.value == "" else self.value
+		if self.value == "":
+			return None
+		return int(self.value)
 
 	orbitalPosition = property(getOrbitalPosition)
 	orbital_position = property(getOrbitalPosition)
 
 
-class ConfigSatlist(ConfigSatellite):
-	def __init__(self, list, default=None):
-		ConfigSatellite.__init__(self, choices=list, default=default)
-
-
-# Let the user select from [min, min + stepwidth, min + (stepwidth * 2), ..., maxVal]
-# with maxVal <= max depending on the stepwidth. The min, max, stepwidth, and default
-# are int values.
+# Lets the user select between [min, min + stepwidth, min + (stepwidth * 2)...,
+# maxval] with maxval <= max depending on the stepwidth. The min, max, stepwidth,
+# and default are int values.
 #
-# wraparound: Pressing RIGHT key at max value brings you to min value and vice versa
-# if set to True.
+# wraparound: Pressing RIGHT key at max value brings you to min value and vice
+# versa if set to True.
 #
 class ConfigSelectionNumber(ConfigSelection):
 	def __init__(self, min, max, stepwidth, default=None, wraparound=False):
+		choices = []
+		step = min
+		while step <= max:
+			choices.append(str(step))
+			step += stepwidth
 		if default is None:
 			default = min
-		ConfigSelection.__init__(self, choices=[(x, str(x)) for x in range(min, max + 1, stepwidth)], default=default)
-		self.wrapAround = wraparound
+		self.wrap = wraparound
+		ConfigSelection.__init__(self, choices, str(default))
+		self.default = default
+		self.lastValue = default
+		self.value = default
 
 	def handleKey(self, key, callback=None):
-		if not self.wrapAround:
-			if key == ACTIONKEY_RIGHT and self.choices.index(self.value) == len(self.choices) - 1:
+		if not self.wrap:
+			value = str(self.value)
+			if key == ACTIONKEY_RIGHT and self.choices.index(value) == len(self.choices) - 1:
 				return
-			if key == ACTIONKEY_LEFT and self.choices.index(self.value) == 0:
+			if key == ACTIONKEY_LEFT and self.choices.index(value) == 0:
 				return
 		ConfigSelection.handleKey(self, key, callback)
+
+	def getValue(self):
+		return int(ConfigSelection.getValue(self))
+
+	def setValue(self, value):
+		ConfigSelection.setValue(self, str(value))
+
+	value = property(getValue, setValue)
 
 
 # This is the control, and base class, for formatted sequence settings.
@@ -1340,7 +1354,7 @@ class ConfigPIN(ConfigInteger):
 	def __init__(self, default, pinLength=4, censor=u"\u2022"):
 		if not isinstance(default, int):
 			raise TypeError("[Config] Error: 'ConfigPIN' default must be an integer!")
-		if censor != "" and (isinstance(censor, str) and len(censor) != 1):  # and (isinstance(censor, unicode) and len(censor) != 1):
+		if censor != "" and (isinstance(censor, str) and len(censor) != 1): # and (isinstance(censor, unicode) and len(censor) != 1):
 			raise ValueError("[Config] Error: Censor must be a single char (or \"\")!")
 		ConfigInteger.__init__(self, default=default, limits=(0, (10 ** pinLength) - 1), censor=censor)
 		self.pinLength = pinLength
@@ -1749,7 +1763,8 @@ class ConfigText(ConfigElement, NumericalTextInput):
 		if session is not None:
 			from Screens.NumericalTextInputHelpDialog import NumericalTextInputHelpDialog
 			self.help_window = session.instantiateDialog(NumericalTextInputHelpDialog, self)
-			self.help_window.setAnimationMode(0)
+			if BoxInfo.getItem("OSDAnimation"):
+				self.help_window.setAnimationMode(0)
 			self.help_window.show()
 
 	def onDeselect(self, session):
@@ -2195,7 +2210,7 @@ class Config(ConfigSubsection):
 
 	def saveToFile(self, filename):
 		try:
-			with open("%s.writing" % filename, "w", encoding="UTF-8") as fd:
+			with open("%s.writing" % filename, "w") as fd:
 				fd.write(self.pickle())
 				fd.flush()
 				fsync(fd.fileno())
@@ -2223,18 +2238,13 @@ class ConfigFile:
 			return self.__resolveValue(pickles[1:], cmap[key].dict()) if len(pickles) > 1 else str(cmap[key].value)
 		return None
 
-	# If silent is True don't display an error on a missing key just return None
-	# to indicate this fact to the calling code.
-	#
-	def getResolvedKey(self, key, silent=False):
+	def getResolvedKey(self, key):
 		names = key.split(".")
 		if len(names) > 1:
 			if names[0] == "config":
 				val = self.__resolveValue(names[1:], config.content.items)
 				if val and len(val) or val == "":
 					return val
-		if silent:
-			return None
 		print("[Config] Error: getResolvedKey '%s' failed!  (Typo?)" % key)
 		return ""
 

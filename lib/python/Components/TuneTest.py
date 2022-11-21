@@ -1,3 +1,4 @@
+from __future__ import print_function
 from enigma import eDVBFrontendParametersSatellite, eDVBFrontendParametersTerrestrial, eDVBFrontendParametersCable, eDVBFrontendParametersATSC, eDVBFrontendParameters, eDVBResourceManager, eTimer
 
 
@@ -9,7 +10,7 @@ class Tuner:
 	# transponder = (0:frequency 1:symbolrate 2:polarisation 3:fec 4:inversion 5:orbpos 6:system 7:modulation 8:rolloff 9:pilot 10:is_id 11:pls_mode 12:pls_code 13:t2mi_plp_id 14:t2mi_pid 15:tsid 16:onid)
 	def tune(self, transponder):
 		if self.frontend:
-			print("[TuneTest] tuning to transponder with data %s" % str(transponder))
+			print("[TuneTest] tuning to transponder with data", transponder)
 			parm = eDVBFrontendParametersSatellite()
 			parm.frequency = transponder[0] * 1000
 			parm.symbol_rate = transponder[1] * 1000
@@ -49,7 +50,7 @@ class Tuner:
 		modulation=2, transmission=2, guard=4,
 		hierarchy=4, system=0, plp_id=0):
 		if self.frontend:
-			print("[TuneTest] tuning to transponder with data %s" % [frequency, inversion, bandwidth, fechigh, feclow, modulation, transmission, guard, hierarchy, system, plp_id])
+			print("[TuneTest] tuning to transponder with data", [frequency, inversion, bandwidth, fechigh, feclow, modulation, transmission, guard, hierarchy, system, plp_id])
 			parm = eDVBFrontendParametersTerrestrial()
 			parm.frequency = frequency
 			parm.inversion = inversion
@@ -73,7 +74,7 @@ class Tuner:
 
 	def tuneCab(self, transponder):
 		if self.frontend:
-			print("[TuneTest] tuning to transponder with data %s" % str(transponder))
+			print("[TuneTest] tuning to transponder with data", transponder)
 			parm = eDVBFrontendParametersCable()
 			parm.frequency = transponder[0]
 			parm.symbol_rate = transponder[1]
@@ -92,7 +93,7 @@ class Tuner:
 
 	def tuneATSC(self, transponder):
 		if self.frontend:
-			print("[TuneTest] tuning to transponder with data %s" % str(transponder))
+			print("[TuneTest] tuning to transponder with data", transponder)
 			parm = eDVBFrontendParametersATSC()
 			parm.frequency = transponder[0]
 			parm.modulation = transponder[1]
@@ -133,9 +134,9 @@ class TuneTest:
 		print("TuneTest for feid %d" % self.feid)
 		if not self.openFrontend():
 			self.oldref = self.session.nav.getCurrentlyPlayingServiceOrGroup()
-			self.session.nav.stopService()  # try to disable foreground service
+			self.session.nav.stopService() # try to disable foreground service
 			if not self.openFrontend():
-				if self.session.pipshown:  # try to disable pip
+				if self.session.pipshown: # try to disable pip
 					if hasattr(self.session, 'infobar'):
 						if self.session.infobar.servicelist.dopipzap:
 							self.session.infobar.servicelist.togglePipzap()
@@ -143,13 +144,13 @@ class TuneTest:
 						del self.session.pip
 					self.session.pipshown = False
 					if not self.openFrontend():
-						self.frontend = None  # in normal case this should not happen
+						self.frontend = None # in normal case this should not happen
 		self.tuner = Tuner(self.frontend)
 		self.timer = eTimer()
 		self.timer.callback.append(self.updateStatus)
 
 	def gotTsidOnid(self, tsid, onid):
-		print("******** got tsid: %s, onid: %s" % (tsid, onid))
+		print("******** got tsid, onid:", tsid, onid)
 		if tsid != -1 and onid != -1:
 			self.pidStatus = self.INTERNAL_PID_STATUS_SUCCESSFUL
 			self.tsid = tsid
@@ -161,18 +162,18 @@ class TuneTest:
 		self.timer.start(100, True)
 
 	def updateStatus(self):
-		tunerdict = {}
-		self.frontend.getFrontendStatus(tunerdict)
+		dict = {}
+		self.frontend.getFrontendStatus(dict)
 		stop = False
 
-		print("[TuneTest] updateStatus tunerdict: %s" % str(tunerdict))
-		if tunerdict["tuner_state"] == "TUNING":
+		print("status:", dict)
+		if dict["tuner_state"] == "TUNING":
 			print("TUNING")
 			self.timer.start(100, True)
 			self.progressCallback((self.getProgressLength(), self.tuningtransponder, self.STATUS_TUNING, self.currTuned))
 		elif self.checkPIDs and self.pidStatus == self.INTERNAL_PID_STATUS_NOOP:
 			print("2nd choice")
-			if tunerdict["tuner_state"] == "LOCKED":
+			if dict["tuner_state"] == "LOCKED":
 				print("acquiring TSID/ONID")
 				self.raw_channel.receivedTsidOnid.get().append(self.gotTsidOnid)
 				self.raw_channel.requestTsidOnid()
@@ -182,30 +183,29 @@ class TuneTest:
 		elif self.checkPIDs and self.pidStatus == self.INTERNAL_PID_STATUS_WAITING:
 			print("waiting for pids")
 		else:
-			if tunerdict["tuner_state"] == "LOSTLOCK" or tunerdict["tuner_state"] == "FAILED":
+			if dict["tuner_state"] == "LOSTLOCK" or dict["tuner_state"] == "FAILED":
 				self.tuningtransponder = self.nextTransponder()
-				self.failedTune.append([self.currTuned, self.oldTuned, "tune_failed", tunerdict])  # last parameter is the frontend status)
+				self.failedTune.append([self.currTuned, self.oldTuned, "tune_failed", dict])  # last parameter is the frontend status)
 				if self.stopOnError != -1 and self.stopOnError <= len(self.failedTune):
 					stop = True
-			elif tunerdict["tuner_state"] == "LOCKED":
-				# pidsFailed = False
+			elif dict["tuner_state"] == "LOCKED":
+				pidsFailed = False
 				if self.checkPIDs:
 					if self.currTuned is not None:
 						if self.tsid != self.currTuned[15] or self.onid != self.currTuned[16]:
-							self.failedTune.append([self.currTuned, self.oldTuned, "pids_failed", {"real": (self.tsid, self.onid), "expected": (self.currTuned[15], self.currTuned[16])}, tunerdict])  # last parameter is the frontend status
-							# pidsFailed = True
+							self.failedTune.append([self.currTuned, self.oldTuned, "pids_failed", {"real": (self.tsid, self.onid), "expected": (self.currTuned[15], self.currTuned[16])}, dict])  # last parameter is the frontend status
+							pidsFailed = True
 						else:
-							self.successfullyTune.append([self.currTuned, self.oldTuned, tunerdict])  # 3rd parameter is the frontend status
+							self.successfullyTune.append([self.currTuned, self.oldTuned, dict])  # 3rd parameter is the frontend status
 							if self.stopOnSuccess != -1 and self.stopOnSuccess <= len(self.successfullyTune):
 								stop = True
-				# elif not self.checkPIDs or (self.checkPIDs and not pidsFailed):
-				else:
-					self.successfullyTune.append([self.currTuned, self.oldTuned, tunerdict])  # 3rd parameter is the frontend status
+				elif not self.checkPIDs or (self.checkPids and not pidsFailed): # FIXME self.checkPids is this a typo?
+					self.successfullyTune.append([self.currTuned, self.oldTuned, dict]) # 3rd parameter is the frontend status
 					if self.stopOnSuccess != -1 and self.stopOnSuccess <= len(self.successfullyTune):
-						stop = True
+								stop = True
 				self.tuningtransponder = self.nextTransponder()
 			else:
-				print("************* tuner_state:%s" % tunerdict["tuner_state"])
+				print("************* tuner_state:", dict["tuner_state"])
 
 			self.progressCallback((self.getProgressLength(), self.tuningtransponder, self.STATUS_NOOP, self.currTuned))
 
@@ -223,36 +223,36 @@ class TuneTest:
 			self.finishedChecking()
 
 	def firstTransponder(self):
-		print("firstTransponder:%s" % str(self.tuningtransponder))
+		print("firstTransponder:")
 		index = 0
 		if self.checkPIDs:
 			print("checkPIDs-loop")
 			# check for tsid != -1 and onid != -1
-			print("index: %s" % index)
-			print("len(self.transponderlist):%s" % len(self.transponderlist))
+			print("index:", index)
+			print("len(self.transponderlist):", len(self.transponderlist))
 			while (index < len(self.transponderlist) and (self.transponderlist[index][15] == -1 or self.transponderlist[index][16] == -1)):
 				index += 1
-		print("FirstTransponder final index:%s" % index)
+		print("FirstTransponder final index:", index)
 		return index
 
 	def nextTransponder(self):
-		print("getting next transponder:%s" % str(self.tuningtransponder))
+		print("getting next transponder", self.tuningtransponder)
 		index = self.tuningtransponder + 1
 		if self.checkPIDs:
 			print("checkPIDs-loop")
 			# check for tsid != -1 and onid != -1
-			print("index: %s" % index)
-			print("len(self.transponderlist):%s" % len(self.transponderlist))
+			print("index:", index)
+			print("len(self.transponderlist):", len(self.transponderlist))
 			while (index < len(self.transponderlist) and (self.transponderlist[index][15] == -1 or self.transponderlist[index][16] == -1)):
 				index += 1
 
-		print("next transponder index:%s" % index)
+		print("next transponder index:", index)
 		return index
 
 	def finishedChecking(self):
 		print("finished testing")
-		print("successfull:%s" % self.successfullyTune)
-		print("failed:%s" % self.failedTune)
+		print("successfull:", self.successfullyTune)
+		print("failed:", self.failedTune)
 
 	def openFrontend(self):
 		res_mgr = eDVBResourceManager.getInstance()
@@ -271,7 +271,7 @@ class TuneTest:
 		return False
 
 	def tune(self):
-		print("tuning to %s" % str(self.tuningtransponder))
+		print("tuning to", self.tuningtransponder)
 		if self.tuningtransponder < len(self.transponderlist):
 			self.pidStatus = self.INTERNAL_PID_STATUS_NOOP
 			self.oldTuned = self.currTuned

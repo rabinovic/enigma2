@@ -3,11 +3,11 @@ from __future__ import absolute_import
 import os
 
 from Components.config import config, ConfigSubList, ConfigSubsection, ConfigSlider
-from Components.SystemInfo import BoxInfo
 from Tools.BoundFunction import boundFunction
 
 import NavigationInstance
 from enigma import iRecordableService, pNavigation
+from boxbranding import getBoxType
 
 
 class FanControl:
@@ -68,9 +68,9 @@ class FanControl:
 		for fanid in list(range(self.getFanCount())):
 			fan = ConfigSubsection()
 			fan.vlt = ConfigSlider(default=15, increment=5, limits=(0, 255))
-			if BoxInfo.getItem("machinebuild") == 'tm2t':
+			if getBoxType() == 'tm2t':
 				fan.pwm = ConfigSlider(default=150, increment=5, limits=(0, 255))
-			if BoxInfo.getItem("machinebuild") == 'tmsingle':
+			if getBoxType() == 'tmsingle':
 				fan.pwm = ConfigSlider(default=100, increment=5, limits=(0, 255))
 			else:
 				fan.pwm = ConfigSlider(default=50, increment=5, limits=(0, 255))

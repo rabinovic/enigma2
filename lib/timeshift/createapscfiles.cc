@@ -31,18 +31,29 @@
 
 using namespace std;
 
-std::string makefilename(const char* base, const char* ext, const char* post)
+char* makefilename(const char* dir, const char* base, const char* ext, const char* post)
 {
-	std::string buf = "";
-	if (base)
-		buf = base;
-	if(ext) {
-    	std::string exts = ext;
-		if (buf.rfind(exts) != buf.length()-exts.length())
-        	buf += ext;
+	static char buf[256];
+	int len1, len2, len3;
+	len1 = (dir ? strlen(dir) : 0);
+	len2 = (base ? strlen(base) : 0);
+	len3 = (ext ? strlen(ext) : 0);
+	if (dir) {
+		strcpy(buf, dir);
+		if (buf[len1-1] != '/') {
+			buf[len1++] = '/';
+      // FIME Out of bound memory access
+			buf[len1] = 0; // NOSONAR
+		}
 	}
+	if (base)
+		strcpy(buf+len1, base);
+	if (ext && len2>=len3 && !strcmp(base+len2-len3,ext))
+		len2 -= len3;
+	if (ext)
+		strcpy(buf+len1+len2, ext);
 	if (post)
-		buf += post;
+		strcpy(buf+len1+len2+len3, post);
 	return buf;
 }
 
@@ -197,32 +208,33 @@ int do_one(int fts, int fap, int fsc, unsigned long long filesize)
 int do_movie(char* inname)
 {
 	int f_ts=-1, f_sc=-1, f_ap=-1, f_tmp=-1;
+	char* tmpname;
 	unsigned long long filesize;
 	struct stat fp;
-	std::string tmpname = makefilename(inname, ".ts", 0);
-	f_ts = open(tmpname.c_str(), O_RDONLY | O_LARGEFILE);
+	tmpname = makefilename(0, inname, ".ts", 0);
+	f_ts = open(tmpname, O_RDONLY | O_LARGEFILE);
 
 	if (f_ts == -1) {
-		printf("Failed to open input stream file \"%s\"\n", tmpname.c_str());
+		printf("Failed to open input stream file \"%s\"\n", tmpname);
 		return 1;
 	}
-	tmpname = makefilename(inname, ".ts", ".reconstruct_apsc");
-	f_tmp = open(tmpname.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0x1a4);
+	tmpname = makefilename(0, inname, ".ts", ".reconstruct_apsc");
+	f_tmp = open(tmpname, O_WRONLY | O_CREAT | O_TRUNC, 0x1a4);
 	if (f_tmp == -1) {
-		printf("Failed to open sentry file \"%s\"\n", tmpname.c_str());
+		printf("Failed to open sentry file \"%s\"\n", tmpname);
 		goto failure;
 	}
 	close(f_tmp);
-	tmpname = makefilename(inname, ".ts", ".ap");
-	f_ap = open(tmpname.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0x1a4);
+	tmpname = makefilename(0, inname, ".ts", ".ap");
+	f_ap = open(tmpname, O_WRONLY | O_CREAT | O_TRUNC, 0x1a4);
 	if (f_ap == -1) {
-		printf("Failed to open output .ap file \"%s\"\n", tmpname.c_str());
+		printf("Failed to open output .ap file \"%s\"\n", tmpname);
 		goto failure;
 	}
-	tmpname = makefilename(inname, ".ts", ".sc");
-	f_sc = open(tmpname.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0x1a4);
+	tmpname = makefilename(0, inname, ".ts", ".sc");
+	f_sc = open(tmpname, O_WRONLY | O_CREAT | O_TRUNC, 0x1a4);
 	if (f_sc == -1) {
-		printf("Failed to open output .sc file \"%s\"\n", tmpname.c_str());
+		printf("Failed to open output .sc file \"%s\"\n", tmpname);
 		goto failure;
 	}
 
@@ -244,20 +256,20 @@ int do_movie(char* inname)
 	close(f_ts);
 	close(f_ap);
 	close(f_sc);
-	unlink(makefilename(inname, ".ts", ".reconstruct_apsc").c_str());
+	unlink(makefilename(0, inname, ".ts", ".reconstruct_apsc"));
 	return 0;
 	failure:
 	if (f_ts != -1)
 		close(f_ts);
 	if (f_ap != -1) {
 		close(f_ap);
-		unlink(makefilename(inname, ".ts", ".ap").c_str());
+		unlink(makefilename(0, inname, ".ts", ".ap"));
 	}
 	if (f_sc != -1) {
 		close(f_sc);
-		unlink(makefilename(inname, ".ts", ".sc").c_str());
+		unlink(makefilename(0, inname, ".ts", ".sc"));
 	}
-	unlink(makefilename(inname, ".ts", ".reconstruct_apsc").c_str());
+	unlink(makefilename(0, inname, ".ts", ".reconstruct_apsc"));
 	return 1;
 }
 

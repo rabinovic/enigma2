@@ -1,8 +1,7 @@
+from enigma import ePixmap, eTimer
 from os.path import isfile
 
-from enigma import ePixmap, eTimer
-
-from skin import domScreens, parsePixmap
+from skin import domScreens, loadPixmap
 from Components.ConditionalWidget import ConditionalWidget
 from Components.GUIComponent import GUIComponent
 from Tools.Directories import SCOPE_LCDSKIN, SCOPE_GUISKIN, fileExists, resolveFilename
@@ -159,7 +158,7 @@ class MultiPixmap(Pixmap):
 						else:
 							pngfile = ""
 						if pngfile and isfile(pngfile):
-							self.pixmaps.append(parsePixmap(pngfile, desktop))
+							self.pixmaps.append(loadPixmap(pngfile, desktop))
 					if not pixmap:
 						if fileExists(resolveFilename(SCOPE_GUISKIN, pixmaps[0], path_prefix=skinPathPrefix)):
 							pixmap = resolveFilename(SCOPE_GUISKIN, pixmaps[0], path_prefix=skinPathPrefix)

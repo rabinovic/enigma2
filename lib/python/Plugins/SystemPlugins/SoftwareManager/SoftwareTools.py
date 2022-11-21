@@ -1,15 +1,16 @@
 # -*- coding: iso-8859-1 -*-
-from time import time
-
+from enigma import eConsoleAppContainer
 from Components.Console import Console
-from Components.International import international
-from Components.Network import iNetwork
-from Components.Opkg import OpkgComponent
 from Components.PackageInfo import PackageInfoHandler
+from Components.International import international
 from Components.Sources.List import List
-from Components.SystemInfo import BoxInfo
+from Components.Opkg import OpkgComponent
+from Components.Network import iNetwork
 from Tools.Directories import resolveFilename, SCOPE_METADIR
 from Tools.HardwareInfo import HardwareInfo
+from time import time
+from boxbranding import getImageVersion
+import six
 
 
 class SoftwareTools(PackageInfoHandler):
@@ -22,7 +23,7 @@ class SoftwareTools(PackageInfoHandler):
 	installed_packetlist = {}
 
 	def __init__(self):
-		aboutInfo = str(BoxInfo.getItem("imageversion"))
+		aboutInfo = getImageVersion()
 		if aboutInfo.startswith("dev-"):
 			self.ImageVersion = 'Experimental'
 		else:
@@ -98,6 +99,7 @@ class SoftwareTools(PackageInfoHandler):
 	def OpkgListAvailableCB(self, result, retval, extra_args=None):
 		(callback) = extra_args or None
 		if result:
+			result = six.ensure_str(result)
 			if self.list_updating:
 				self.available_packetlist = []
 				for x in result.splitlines():
@@ -136,6 +138,7 @@ class SoftwareTools(PackageInfoHandler):
 	def InstallMetaPackageCB(self, result, retval=None, extra_args=None):
 		(callback) = extra_args or None
 		if result:
+			result = six.ensure_str(result)
 			self.fillPackagesIndexList()
 			if callback is None:
 				self.startOpkgListInstalled()
@@ -162,6 +165,7 @@ class SoftwareTools(PackageInfoHandler):
 	def OpkgListInstalledCB(self, result, retval, extra_args=None):
 		(callback) = extra_args or None
 		if result:
+			result = six.ensure_str(result)
 			self.installed_packetlist = {}
 			for x in result.splitlines():
 				tokens = x.split(' - ')

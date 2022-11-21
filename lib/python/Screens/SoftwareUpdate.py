@@ -1,6 +1,9 @@
 from json import load
 from os.path import exists
-from urllib.request import urlopen
+try:
+	from urllib.request import urlopen
+except ImportError:
+	from urllib2 import urlopen
 
 from enigma import eTimer
 
@@ -11,7 +14,7 @@ from Components.Opkg import OpkgComponent
 from Components.Pixmap import Pixmap
 from Components.ScrollLabel import ScrollLabel
 from Components.Slider import Slider
-from Components.SystemInfo import BoxInfo, getBoxDisplayName
+from Components.SystemInfo import BoxInfo
 from Components.Sources.List import List
 from Components.Sources.StaticText import StaticText
 from Screens.HelpMenu import HelpableScreen
@@ -21,6 +24,9 @@ from Screens.Screen import Screen, ScreenSummary
 from Screens.Standby import QUIT_REBOOT, TryQuitMainloop
 from Tools.Directories import SCOPE_GUISKIN, resolveFilename
 from Tools.LoadPixmap import LoadPixmap
+
+displayBrand = BoxInfo.getItem("displaybrand")
+displayModel = BoxInfo.getItem("displaymodel")
 
 
 class SoftwareUpdate(Screen, HelpableScreen, ProtectedScreen):
@@ -165,7 +171,7 @@ class SoftwareUpdate(Screen, HelpableScreen, ProtectedScreen):
 			config.ParentalControl.config_sections.software_update.value
 
 	def layoutFinished(self):
-		self["list"].master.master.instance.enableAutoNavigation(False)
+		self["list"].master.master.instance.allowNativeKeys(False)
 		self.setStatus("update")
 		self.opkg.startCmd(OpkgComponent.CMD_UPDATE)
 		self.timer.start(25, True)
@@ -189,7 +195,7 @@ class SoftwareUpdate(Screen, HelpableScreen, ProtectedScreen):
 #			status = status.get("status")
 			status = ""
 			message = ""
-			with urlopen("https://ampel.mynonpublic.com/Ampel/index.php") as fd:
+			with urlopen("http://ampel.mynonpublic.com/Ampel/index.php") as fd:
 				tmpStatus = fd.read()
 				if b"rot.png" in tmpStatus:
 					status = "YELLOW" if exists("/etc/.beta") else "RED"
@@ -298,7 +304,7 @@ class SoftwareUpdate(Screen, HelpableScreen, ProtectedScreen):
 			print("[SoftwareUpdate] Warning: There are %d packages available, more than the %d maximum recommended, for an update!" % (self.packageCount, updateLimit))
 			message = [
 				_("Warning: There are %d update packages!") % self.packageCount,
-				_("There is a risk that your %s %s will not boot or may malfunction after such a large on-line update.") % getBoxDisplayName(),
+				_("There is a risk that your %s %s will not boot or may malfunction after such a large on-line update.") % (displayBrand, displayModel),
 				_("You should flash a new image!"),
 				_("What would you like to do?")
 			]
@@ -312,7 +318,7 @@ class SoftwareUpdate(Screen, HelpableScreen, ProtectedScreen):
 
 	def keyUpdateCallback(self, answer):
 		if answer == 1:
-			from Screens.FlashManager import FlashManager  # This must be here to ensure the plugin is initialized.
+			from Screens.FlashManager import FlashManager # This must be here to ensure the plugin is initialized.
 			self.session.open(FlashManager)
 		elif answer == 2:
 			self.session.open(RunSoftwareUpdate)
@@ -510,9 +516,9 @@ class RunSoftwareUpdate(Screen, HelpableScreen):
 					self["update"].appendText("%s\n" % ngettext("%d package was configured.", "%d packages were configured.", self.configureCount) % self.configureCount)
 					if self.deselectCount:
 						self["update"].appendText("%s\n" % ngettext("%d package was deselected.", "%d packages were deselected.", self.deselectCount) % self.deselectCount)
-						self["update"].appendText("\n%s\n" % _("Deselected packages usually occur because those packaged are incompatible with existing packages.  While this is mostly harmless it is possible that your %s %s may experience issues.") % getBoxDisplayName())
+						self["update"].appendText("\n%s\n" % _("Deselected packages usually occur because those packaged are incompatible with existing packages.  While this is mostly harmless it is possible that your %s %s may experience issues.") % (displayBrand, displayModel))
 				else:
-					error = _("Your receiver might be unusable now.  Please consult the manual for further assistance before rebooting your %s %s.") % getBoxDisplayName()
+					error = _("Your receiver might be unusable now.  Please consult the manual for further assistance before rebooting your %s %s.") % (displayBrand, displayModel)
 					if self.upgradeCount == 0:
 						error = _("No updates were available.  Please try again later.")
 					self["update"].appendText("%s: %s\n" % (_("Error"), error))
@@ -551,7 +557,7 @@ class RunSoftwareUpdate(Screen, HelpableScreen):
 	def createSummary(self):
 		return RunSoftwareUpdateSummary
 
-	def restoreMetrixHD(self):  # TODO: call this only after metrix update / move this to Metrix Plugin
+	def restoreMetrixHD(self): # TODO: call this only after metrix update / move this to Metrix Plugin
 		try:
 			if config.skin.primary_skin.value == "MetrixHD/skin.MySkin.xml":
 				if not exists("/usr/share/enigma2/MetrixHD/skin.MySkin.xml"):
@@ -566,7 +572,7 @@ class RunSoftwareUpdate(Screen, HelpableScreen):
 		self.restoreMetrixHDCallback()
 
 	def restoreMetrixHDCallback(self, ret=None):
-		self.session.openWithCallback(self.keyCancelCallback, MessageBox, _("Upgrade finished.") + " " + _("Do you want to reboot your %s %s?") % getBoxDisplayName())
+		self.session.openWithCallback(self.keyCancelCallback, MessageBox, _("Upgrade finished.") + " " + _("Do you want to reboot your %s %s?") % (displayBrand, displayModel))
 
 
 class RunSoftwareUpdateSummary(ScreenSummary):
