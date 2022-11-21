@@ -1,14 +1,12 @@
 #include <unistd.h>
 #include <iostream>
 #include <fstream>
-#include <memory>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <libsig_comp.h>
 #include <linux/dvb/version.h>
-#include <getopt.h>
 
 #include <lib/actions/action.h>
 #include <lib/driver/rc.h>
@@ -171,7 +169,7 @@ public:
 	}
 };
 
-bool replace(std::string& str, const std::string& from, const std::string& to)
+bool replace(std::string& str, const std::string& from, const std::string& to) 
 {
 	size_t start_pos = str.find(from);
 	if(start_pos == std::string::npos)
@@ -186,7 +184,7 @@ static const std::string getConfigCurrentSpinner(const char* key)
 
 	// if value is not empty, means config.skin.primary_skin exist in settings file
 
-	if (!value.empty())
+	if (!value.empty()) 
 	{
 		replace(value, "skin.xml", "spinner");
 		std::string png_location = eEnv::resolve("${datadir}/enigma2/" + value + "/wait1.png");
@@ -198,7 +196,7 @@ static const std::string getConfigCurrentSpinner(const char* key)
 
 	}
 
-	// try to find spinner in skin_default/spinner subfolder
+	// try to find spinner in skin_default/spinner subfolder 
 	value = "skin_default/spinner";
 
 	// check /usr/share/enigma2/skin_default/spinner/wait1.png
@@ -267,63 +265,6 @@ void catchTermSignal()
 		perror("SIGTERM");
 }
 
-class CommandLineArgs
-{
-	struct RawMemDeleter {
-		void operator()(wchar_t *ptr) {
-			PyMem_RawFree(ptr);
-		}
-	};
-
-	using wchar_ptr_t = std::unique_ptr<wchar_t, RawMemDeleter>;
-	std::vector<wchar_ptr_t> argvStorage;
-	std::wstring carg{L"-c"};
-
-public:
-	std::vector<wchar_t*> wargv;
-	std::string command;
-	std::string file;
-
-	CommandLineArgs(int argc, char **argv) {
-		while(true) {
-			// I need + to do it POSIXLY_CORRECT
-			// that is stop looking for options after first non-opt argument
-			int opt = getopt(argc, argv, "+c:");
-			switch (opt) {
-			case 'c':
-				command = std::string(optarg);
-				break;
-			case '?':
-				// special python option, not implemented
-				continue;
-			case -1:
-				// end of arguments
-				if (optind < argc) {
-					file = std::string(argv[optind]);
-				}
-				break;
-			}
-			break;
-		}
-
-		if (!command.empty()) {
-			wargv.push_back(&carg[0]);
-		}
-		if (!command.empty() || !file.empty()) {
-			// pass remaining arguments to script
-			for (int i = optind; i < argc; ++i) {
-				argvStorage.push_back(wchar_ptr_t(Py_DecodeLocale(argv[i], nullptr)));
-				wargv.push_back(argvStorage.back().get());
-			}
-		}
-
-		for (size_t i=0; i<wargv.size(); i++) {
-			eDebug("[Python] argv[%zd] %ls", i, wargv[i]);
-		}
-
-	}
-};
-
 int main(int argc, char **argv)
 {
 #ifdef MEMLEAK_CHECK
@@ -334,19 +275,6 @@ int main(int argc, char **argv)
 	atexit(object_dump);
 #endif
 
-	// Try to behave more like python interpreter does
-	CommandLineArgs cmdArgs(argc, argv);
-
-	// if inline python command just execute it and exit
-	if (!cmdArgs.command.empty()) {
-		Py_Initialize();
-		PySys_SetArgv(cmdArgs.wargv.size(), cmdArgs.wargv.data());
-		PyRun_SimpleString(cmdArgs.command.c_str());
-		Py_Finalize();
-		return 0;
-	}
-
-	// normal enigma2 start
 	gst_init(&argc, &argv);
 
 	// set pythonpath if unset
@@ -431,9 +359,12 @@ int main(int argc, char **argv)
 			std::string rfilename;
 			snprintf(filename, sizeof(filename), "%s/wait%d.png", skinpath.c_str(), i + 1);
 			rfilename = eEnv::resolve(filename);
-			loadPNG(wait[i], rfilename.c_str());
+			wait[i] = 0;
+			struct stat st;
+			if (::stat(rfilename.c_str(), &st) == 0)
+				loadPNG(wait[i], rfilename.c_str());
 
-			if (!wait[i])
+			if (!wait[i]) 
 			{
 				// spinner failed
 				if (i==0)
@@ -472,14 +403,7 @@ int main(int argc, char **argv)
 	/* start at full size */
 	eVideoWidget::setFullsize(true);
 
-	// if a file was given run it instead of default
-	if (!cmdArgs.file.empty()) {
-		PySys_SetArgv(cmdArgs.wargv.size(), cmdArgs.wargv.data());
-		python.execFile(cmdArgs.file.c_str());
-	} else {
-		eDebug("[Python] run default");
-		python.execFile(eEnv::resolve("${libdir}/enigma2/python/StartEnigma.py").c_str());
-	}
+	python.execFile(eEnv::resolve("${libdir}/enigma2/python/StartEnigma.py").c_str());
 
 	/* restore both decoders to full size */
 	eVideoWidget::setFullsize(true);
