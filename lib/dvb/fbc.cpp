@@ -55,7 +55,7 @@ static void loadConnectChoices(const char* filename, bool *connect_choices)
 		while(EOF != (c = fgetc(fp)))
 		{
 			if(isdigit(c))
-				connect_choices[c - '0'] = true; // NOSONAR
+				connect_choices[c - '0'] = true;
 		}
 		fclose(fp);
 	}

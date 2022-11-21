@@ -30,8 +30,6 @@ protected:
 
 	void cursorSave();
 	void cursorRestore();
-	void cursorSaveLine(int n);
-	int cursorRestoreLine();
 	int size();
 
 	RESULT connectItemChanged(const sigc::slot0<void> &itemChanged, ePtr<eConnection> &connection);
@@ -44,14 +42,11 @@ protected:
 
 	int getItemHeight() { return m_itemheight; }
 
-private:
-	int m_cursor;
-	int m_saved_cursor;
-	int m_saved_cursor_line;
-
 protected:
 	ePyObject m_list;
+	int m_cursor, m_saved_cursor;
 	eSize m_itemsize;
+	ePtr<gFont> m_font;
 	int m_itemheight;
 #endif
 };
@@ -92,7 +87,7 @@ public:
 	void entryRemoved(int idx);
 	void setTemplate(SWIG_PYOBJECT(ePyObject) tmplate);
 private:
-	std::map<int, ePtr<gFont> > m_fonts;
+	std::map<int, ePtr<gFont> > m_font;
 };
 
 #ifdef SWIG

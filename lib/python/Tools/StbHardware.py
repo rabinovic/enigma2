@@ -2,8 +2,8 @@ from fcntl import ioctl
 from os.path import exists, isfile
 from struct import pack, unpack
 from time import time, localtime, gmtime
+from boxbranding import getBoxType, getBrandOEM
 from Tools.Directories import fileReadLine, fileWriteLine
-from Components.SystemInfo import BoxInfo
 
 MODULE_NAME = __name__.split(".")[-1]
 wasTimerWakeup = None
@@ -54,19 +54,18 @@ def getBoxRCType():
 def getFPVersion():
 	version = None
 	try:
-		if BoxInfo.getItem("brand") == "blackbox" and isfile("/proc/stb/info/micomver"):
+		if getBrandOEM() == "blackbox" and isfile("/proc/stb/info/micomver"):
 			version = fileReadLine("/proc/stb/info/micomver", source=MODULE_NAME)
-		elif BoxInfo.getItem("machinebuild") in ('dm7080', 'dm820', 'dm520', 'dm525', 'dm900', 'dm920'):
+		elif getBoxType() in ('dm7080', 'dm820', 'dm520', 'dm525', 'dm900', 'dm920'):
 			version = open("/proc/stb/fp/version", "r").read()
 		else:
 			version = int(open("/proc/stb/fp/version", "r").read())
 	except OSError:
-		if isfile("/dev/dbox/fp0"):
-			try:
-				with open("/dev/dbox/fp0") as fd:
-					version = ioctl(fd.fileno(), 0)
-			except OSError as err:
-				print("[StbHardware] Error %d: Unable to access '/dev/dbox/fp0', getFPVersion failed!  (%s)" % (err.errno, err.strerror))
+		try:
+			with open("/dev/dbox/fp0") as fd:
+				version = ioctl(fd.fileno(), 0)
+		except OSError as err:
+			print("[StbHardware] Error %d: Unable to access '/dev/dbox/fp0', getFPVersion failed!  (%s)" % (err.errno, err.strerror))
 	return version
 
 

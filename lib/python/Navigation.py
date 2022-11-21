@@ -14,7 +14,7 @@ import Screens.Standby
 import NavigationInstance
 import ServiceReference
 from Screens.InfoBar import InfoBar, MoviePlayer
-from Components.SystemInfo import BoxInfo
+from boxbranding import getBoxType, getBrandOEM, getMachineBuild
 
 # TODO: remove pNavgation, eNavigation and rewrite this stuff in python.
 
@@ -60,7 +60,7 @@ class Navigation:
 		self.__wasRecTimerWakeup = False
 		self.__wasPowerTimerWakeup = False
 
-		if not path.exists("/etc/enigma2/.deep"):  # flag file comes from "/usr/bin/enigma2.sh"
+		if not path.exists("/etc/enigma2/.deep"): #flag file comes from "/usr/bin/enigma2.sh"
 			print("=" * 100)
 			print("[NAVIGATION] Receiver does not start from Deep Standby - skip wake up detection")
 			print("=" * 100)
@@ -77,11 +77,11 @@ class Navigation:
 			print("[NAVIGATION] ERROR: can't read wakeup data")
 			self.lastshutdowntime, self.wakeuptime, self.timertime, self.wakeuptyp, self.getstandby, self.recordtime, self.forcerecord = int(now), -1, -1, 0, 0, -1, 0
 		self.syncCount = 0
-		hasFakeTime = (now <= 31536000 or now - self.lastshutdowntime <= 120) and self.getstandby < 2  # set hasFakeTime only if lower than values and was last shutdown to deep standby
+		hasFakeTime = (now <= 31536000 or now - self.lastshutdowntime <= 120) and self.getstandby < 2 #set hasFakeTime only if lower than values and was last shutdown to deep standby
 		wasTimerWakeup, wasTimerWakeup_failure = getFPWasTimerWakeup(True)
 		#TODO: verify wakeup-state for boxes where only after shutdown removed the wakeup-state (for boxes where "/proc/stb/fp/was_timer_wakeup" is not writable (clearFPWasTimerWakeup() in StbHardware.py has no effect -> after x hours and restart/reboot is wasTimerWakeup = True)
 
-		if 0:  # debug
+		if 0: #debug
 			print("#" * 100)
 			print("[NAVIGATION] timediff from last shutdown to now = %ds" % (now - self.lastshutdowntime))
 			print("[NAVIGATION] shutdowntime: %s, wakeuptime: %s timertime: %s, recordtime: %s" % (ctime(self.lastshutdowntime), ctime(self.wakeuptime), ctime(self.timertime), ctime(self.recordtime)))
@@ -93,20 +93,20 @@ class Navigation:
 		print("[NAVIGATION] current time is %s -> it's fake-time suspected: %s" % (ctime(now), hasFakeTime))
 		print("-" * 100)
 
-		thisBox = BoxInfo.getItem("machinebuild")
-		if not config.workaround.deeprecord.value and (wasTimerWakeup_failure or thisBox in ('ixussone', 'uniboxhd1', 'uniboxhd2', 'uniboxhd3', 'sezam5000hd', 'mbtwin', 'beyonwizt3', 'et8000') or BoxInfo.getItem("brand") in ('ebox', 'azbox', 'xp', 'ini', 'fulan', 'entwopia') or BoxInfo.getItem("model") in ('dags7335', 'dags7356', 'dags7362')):
+		thisBox = getBoxType()
+		if not config.workaround.deeprecord.value and (wasTimerWakeup_failure or thisBox in ('ixussone', 'uniboxhd1', 'uniboxhd2', 'uniboxhd3', 'sezam5000hd', 'mbtwin', 'beyonwizt3', 'et8000') or getBrandOEM() in ('ebox', 'azbox', 'xp', 'ini', 'fulan', 'entwopia') or getMachineBuild() in ('dags7335', 'dags7356', 'dags7362')):
 			print("[NAVIGATION] FORCED DEEPSTANDBY-WORKAROUND FOR THIS BOXTYPE (%s)" % thisBox)
 			print("-" * 100)
 			config.workaround.deeprecord.setValue(True)
 			config.workaround.deeprecord.save()
 			config.save()
 
-		if config.workaround.deeprecord.value:  # work-around for boxes where driver not sent was_timer_wakeup signal to e2
+		if config.workaround.deeprecord.value: #work-around for boxes where driver not sent was_timer_wakeup signal to e2
 			print("[NAVIGATION] starting deepstandby-workaround")
 			self.wakeupwindow_plus = self.timertime + 300
 			self.wakeupwindow_minus = self.wakeuptime - (config.workaround.wakeupwindow.value * 60)
 			wasTimerWakeup = False
-			if not hasFakeTime and now >= self.wakeupwindow_minus and now <= self.wakeupwindow_plus:  # if there is a recording sheduled, set the wasTimerWakeup flag
+			if not hasFakeTime and now >= self.wakeupwindow_minus and now <= self.wakeupwindow_plus: # if there is a recording sheduled, set the wasTimerWakeup flag
 				wasTimerWakeup = True
 				f = open("/tmp/was_timer_wakeup_workaround.txt", "w")
 				file = f.write(str(wasTimerWakeup))
@@ -130,7 +130,7 @@ class Navigation:
 				self.wakeupCheck()
 				return
 
-		if hasFakeTime and self.wakeuptime > 0:  # check for NTP-time sync, if no sync, wait for transponder time
+		if hasFakeTime and self.wakeuptime > 0: # check for NTP-time sync, if no sync, wait for transponder time
 			if Screens.Standby.TVinStandby.getTVstandby('waitfortimesync') and not wasTimerWakeup:
 				self.skipTVWakeup = True
 				Screens.Standby.TVinStandby.setTVstate('power')
@@ -145,7 +145,7 @@ class Navigation:
 
 	def wakeupCheck(self, runCheck=True):
 		now = time()
-		stbytimer = 15  # original was 15
+		stbytimer = 15 # original was 15
 
 		if runCheck and ((self.__wasTimerWakeup or config.workaround.deeprecord.value) and now >= self.wakeupwindow_minus and now <= self.wakeupwindow_plus):
 			if self.syncCount > 0:
@@ -237,7 +237,7 @@ class Navigation:
 
 		result = "successful"
 		if runNextSync:
-			if self.syncCount <= 24:  # max 2 mins or when time is in sync
+			if self.syncCount <= 24: # max 2 mins or when time is in sync
 				self.timesynctimer.start(5000, True)
 				return
 			else:
@@ -316,11 +316,6 @@ class Navigation:
 					self.stopService()
 					if alternativeref and self.pnav and self.pnav.playService(alternativeref):
 						print("[Navigation] Failed to start", alternativeref)
-						if oldref and "://" in oldref.getPath():
-							print("[Navigation] Streaming was active -> try again")  # use timer to give the streamserver the time to deallocate the tuner
-							self.retryServicePlayTimer = eTimer()
-							self.retryServicePlayTimer.callback.append(boundFunction(self.playService, ref, checkParentalControl, forceRestart, adjust))
-							self.retryServicePlayTimer.start(500, True)
 					return 0
 				elif checkParentalControl and not parentalControl.isServicePlayable(playref, boundFunction(self.playService, checkParentalControl=False)):
 					if self.currentlyPlayingServiceOrGroup and InfoBarInstance and InfoBarInstance.servicelist.servicelist.setCurrent(self.currentlyPlayingServiceOrGroup, adjust):
@@ -335,14 +330,9 @@ class Navigation:
 					self.currentlyPlayingServiceOrGroup = InfoBarInstance.servicelist.servicelist.getCurrent()
 				self.skipServiceReferenceReset = True
 				if self.pnav.playService(playref):
-					print("[Navigation] Failed to start", playref.toString())
+					print("[Navigation] Failed to start", playref)
 					self.currentlyPlayingServiceReference = None
 					self.currentlyPlayingServiceOrGroup = None
-					if oldref and "://" in oldref.getPath():
-						print("[Navigation] Streaming was active -> try again")  # use timer to give the streamserver the time to deallocate the tuner
-						self.retryServicePlayTimer = eTimer()
-						self.retryServicePlayTimer.callback.append(boundFunction(self.playService, ref, checkParentalControl, forceRestart, adjust))
-						self.retryServicePlayTimer.start(500, True)
 				self.skipServiceReferenceReset = False
 				return 0
 		elif oldref and InfoBarInstance and InfoBarInstance.servicelist.servicelist.setCurrent(oldref, adjust):
@@ -407,8 +397,8 @@ class Navigation:
 		rec = self.RecordTimer.isRecording()
 		next_rec_time = self.RecordTimer.getNextRecordingTime()
 		if rec or (next_rec_time > 0 and (next_rec_time - now) < 360):
-			print('[NAVIGATION] - recording = %s, recording in next minutes = %s, save time shift = %s' % (rec, next_rec_time - now < 360 and not (config.timeshift.isRecording.value and next_rec_time - now >= 298), config.timeshift.isRecording.value))
-			if not self.RecordTimer.isRecTimerWakeup():  # if not timer wake up - enable trigger file for automatical shutdown after recording
+			print('[NAVIGATION] - recording = %s, recording in next minutes = %s, save timeshift = %s' % (rec, next_rec_time - now < 360 and not (config.timeshift.isRecording.value and next_rec_time - now >= 298), config.timeshift.isRecording.value))
+			if not self.RecordTimer.isRecTimerWakeup():# if not timer wake up - enable trigger file for automatical shutdown after recording
 				f = open("/tmp/was_rectimer_wakeup", "w")
 				f.write('1')
 				f.close()

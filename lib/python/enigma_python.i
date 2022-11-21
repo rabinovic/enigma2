@@ -100,7 +100,6 @@ is usually caused by not marking PSignals as immutable.
 #include <lib/dvb/cablescan.h>
 #include <lib/dvb/encoder.h>
 #include <lib/dvb/streamserver.h>
-#include <lib/dvb/rtspstreamserver.h>
 #include <lib/dvb/metaparser.h>
 #include <lib/components/scan.h>
 #include <lib/components/file_eraser.h>
@@ -270,7 +269,6 @@ typedef long time_t;
 %include <lib/gdi/picload.h>
 %include <lib/dvb/fcc.h>
 %include <lib/dvb/streamserver.h>
-%include <lib/dvb/rtspstreamserver.h>
 %include <lib/dvb/metaparser.h>
 /**************  eptr  **************/
 

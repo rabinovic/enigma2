@@ -216,7 +216,7 @@ protected:
 	int m_tune_state;
 	bool m_noaudio;
 
-		/* in time shift mode, we essentially have two channels, and thus pmt handlers. */
+		/* in timeshift mode, we essentially have two channels, and thus pmt handlers. */
 	eDVBServicePMTHandler m_service_handler_timeshift;
 	eDVBServiceEITHandler m_event_handler;
 	int m_current_audio_pid;
@@ -246,7 +246,7 @@ protected:
 	int selectAudioStream(int n = -1);
 	RESULT setFastForward_internal(int ratio, bool final_seek=false);
 
-		/* time shift */
+		/* timeshift */
 	ePtr<iDVBTSRecorder> m_record;
 	std::set<int> m_pids_active;
 

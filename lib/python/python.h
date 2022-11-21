@@ -9,7 +9,7 @@
 #if PY_VERSION_HEX >= 0x030a0000
 #define PY_SSIZE_T_CLEAN 1
 #endif
-#include "Python.h"
+#include <Python.h>
 
 #if !defined(SKIP_PART1) && !defined(SWIG)
 
@@ -57,7 +57,7 @@ public:
 	ePyObject &operator=(PyListObject *ob) { return operator=((PyObject*)ob); }
 	ePyObject &operator=(PyStringObject *ob) { return operator=((PyObject*)ob); }
 	operator PyObject*();
-	operator PyVarObject*() { return (PyVarObject*)operator PyVarObject*(); } // NOSONAR
+	operator PyVarObject*() { return (PyVarObject*)operator PyVarObject*(); }
 	operator PyTupleObject*() { return (PyTupleObject*)operator PyObject*(); }
 	operator PyListObject*() { return (PyListObject*)operator PyObject*(); }
 	operator PyStringObject*() { return (PyStringObject*)operator PyObject*(); }

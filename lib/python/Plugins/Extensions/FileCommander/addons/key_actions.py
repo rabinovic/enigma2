@@ -1,16 +1,9 @@
+#!/usr/bin/env python
 # -*- coding: iso-8859-1 -*-
 
-from grp import getgrgid
-from mimetypes import guess_type
-import os
-from pathlib import Path
-from pwd import getpwuid
-from re import search
-import stat
-from sys import maxsize
-from time import localtime, strftime
-
 # Components
+from __future__ import print_function
+from __future__ import absolute_import
 from Components.config import config
 from Components.Scanner import openFile
 from Components.MovieList import AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, MOVIE_EXTENSIONS, DVD_EXTENSIONS
@@ -29,7 +22,17 @@ from Tools.UnitConversions import UnitScaler, UnitMultipliers
 import Tools.Notifications
 
 # Various
+from mimetypes import guess_type
 from enigma import eServiceReference, eActionMap
+from sys import maxsize
+
+import stat
+import pwd
+import grp
+import time
+import re
+import os
+from pathlib import Path
 
 # Addons
 from .unrar import RarMenuScreen
@@ -103,7 +106,7 @@ class stat_info:
 	@staticmethod
 	def username(uid):
 		try:
-			pwent = getpwuid(uid)
+			pwent = pwd.getpwuid(uid)
 			return pwent.pw_name
 		except KeyError as ke:
 			return _("Unknown user: %d") % uid
@@ -111,14 +114,14 @@ class stat_info:
 	@staticmethod
 	def groupname(gid):
 		try:
-			grent = getgrgid(gid)
+			grent = grp.getgrgid(gid)
 			return grent.gr_name
 		except KeyError as ke:
 			return _("Unknown group: %d") % gid
 
 	@staticmethod
 	def formatTime(t):
-		return strftime(config.usage.date.daylong.value + " " + config.usage.time.long.value, localtime(t))
+		return time.strftime(config.usage.date.daylong.value + " " + config.usage.time.long.value, time.localtime(t))
 
 
 task_Stout = []
@@ -660,7 +663,7 @@ class key_actions(stat_info):
 		testFileName = filename.lower()
 		filetype = os.path.splitext(testFileName)[1]
 		longname = sourceDir + filename
-		print("[Filebrowser]: %s %s %s" % (filename, sourceDir, testFileName))
+		print("[Filebrowser]:", filename, sourceDir, testFileName)
 		if not fileExists(longname):
 			self.session.open(MessageBox, _("File not found: %s") % longname, type=MessageBox.TYPE_ERROR)
 			return
@@ -677,7 +680,7 @@ class key_actions(stat_info):
 				self.session.open(DVD.DVDPlayer, dvd_filelist=[longname])
 		elif filetype in AUDIO_EXTENSIONS:
 			self.play_music(self.SOURCELIST)
-		elif filetype == ".rar" or search('\.r\d+$', filetype):
+		elif filetype == ".rar" or re.search('\.r\d+$', filetype):
 			self.session.openWithCallback(self.onFileActionCB, RarMenuScreen, self.SOURCELIST, self.TARGETLIST)
 		elif testFileName.endswith(".tar.gz") or filetype in (".tgz", ".tar"):
 			self.session.openWithCallback(self.onFileActionCB, TarMenuScreen, self.SOURCELIST, self.TARGETLIST)

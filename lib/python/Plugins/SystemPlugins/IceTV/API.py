@@ -7,7 +7,6 @@ All Right Reserved
 License: Proprietary / Commercial - contact enigma.licensing (at) urbanec.net
 '''
 from __future__ import print_function
-import six
 
 import requests
 import json
@@ -16,7 +15,7 @@ from fcntl import ioctl
 from struct import pack
 from socket import socket, create_connection, AF_INET, SOCK_DGRAM, SHUT_RDWR, error as sockerror
 from . import config, saveConfigFile, getIceTVDeviceType
-from Components.SystemInfo import BoxInfo
+from boxbranding import getMachineBrand, getMachineName, getImageBuild
 
 _version_string = "20191127"
 _protocol = "http://"
@@ -27,8 +26,7 @@ print("[IceTV] server set to", config.plugins.icetv.server.name.value)
 
 iceTVServers = {
     _("Australia"): "api.icetv.com.au",
-    # The German IceTV service has closed down
-    # _("Germany"): "api.icetv.de",
+    _("Germany"): "api.icetv.de",
 }
 
 
@@ -48,9 +46,9 @@ def getMacAddress(ifname):
     sock = socket(AF_INET, SOCK_DGRAM)
     # noinspection PyBroadException
     try:
-        iface = pack('256s', six.ensure_binary(ifname[:15], "utf-8"))
+        iface = pack('256s', ifname[:15])
         info = ioctl(sock.fileno(), 0x8927, iface)
-        result = ''.join(['%02x:' % six.byte2int([char]) for char in info[18:24]])[:-1].upper()
+        result = ''.join(['%02x:' % ord(char) for char in info[18:24]])[:-1].upper()
     except:
         pass
     sock.close()
@@ -89,7 +87,7 @@ class Request(object):
         self.headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "SystemPlugins.IceTV/%s (%s; %s; %s)" % (_version_string, BoxInfo.getItem("displaybrand"), BoxInfo.getItem("displaymodel"), BoxInfo.getItem("imagebuild")),
+            "User-Agent": "SystemPlugins.IceTV/%s (%s; %s; %s)" % (_version_string, getMachineBrand(), getMachineName(), getImageBuild()),
         }
         self.url = _protocol + config.plugins.icetv.server.name.value + resource
         self.data = {}

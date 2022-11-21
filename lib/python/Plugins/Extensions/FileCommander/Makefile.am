@@ -1,6 +1,6 @@
 installdir = $(pkglibdir)/python/Plugins/Extensions/FileCommander
 
-SUBDIRS = addons pic
+SUBDIRS = addons images pic
 
 
 install_PYTHON = *.py

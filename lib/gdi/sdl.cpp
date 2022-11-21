@@ -7,7 +7,7 @@
 
 #include <SDL2/SDL.h>
 
-gSDLDC::gSDLDC() : m_pump(eApp, 1,"gSDLDC"), m_window(nullptr), m_osd_tex(nullptr)
+gSDLDC::gSDLDC() : m_pump(eApp, 1), m_window(nullptr), m_osd_tex(nullptr)
 {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		eWarning("[gSDLDC] Could not initialize SDL: %s", SDL_GetError());
@@ -75,7 +75,7 @@ void gSDLDC::exec(const gOpcode *o)
 	switch (o->opcode) {
 	case gOpcode::flush:
 		pushEvent(EV_FLIP);
-		eDebug("[gSDLDC] FLUSH");
+		//eDebug("[gSDLDC] FLUSH");
 		break;
 	default:
 		gDC::exec(o);
@@ -121,11 +121,11 @@ void gSDLDC::evFlip()
 {
 	if (!m_window)
 		return;
-	
+
 	// Clear
 	SDL_SetRenderDrawColor(m_render, 0, 0, 0, 0);
 	SDL_RenderClear(m_render);
-	
+
 	// Render OSD
 	SDL_UpdateTexture(m_osd_tex, NULL, m_osd->pixels, m_osd->pitch);
 	SDL_RenderCopy(m_render, m_osd_tex, NULL, NULL);
