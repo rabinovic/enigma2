@@ -1315,11 +1315,8 @@ void eDVBServicePlay::serviceEventTimeshift(int event)
 		{
 			if (m_timeshift_file_next.empty())
 			{
-				if (!eConfigManager::getConfigBoolValue("config.timeshift.skipreturntolive", false))
-				{
-					eDebug("[eDVBServicePlay] time shift EOF, so let's go live");
-					switchToLive();
-				}
+				eDebug("[eDVBServicePlay] time shift EOF, so let's go live");
+				switchToLive();
 			}
 			else
 			{

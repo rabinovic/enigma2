@@ -5,7 +5,7 @@
 # openATV <openatv@gmail.com>, 2021.
 # Holger <mrservo@gmx.de>, 2021.
 # Makumbo <tokioplo@web.de>, 2021, 2022.
-# Mr.Servo <mrservo@gmx.de>, 2021, 2022.
+# Mr.Servo <mrservo@gmx.de>, 2021.
 # VfBFan <drop0815@posteo.de>, 2021, 2022.
 # Gunnar Koser <info@e2world.de>, 2022.
 msgid ""
@@ -13,8 +13,8 @@ msgstr ""
 "Project-Id-Version: tuxbox-enigma 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-11-02 11:21+0000\n"
-"PO-Revision-Date: 2022-11-19 04:47+0000\n"
-"Last-Translator: Makumbo <tokioplo@web.de>\n"
+"PO-Revision-Date: 2022-11-13 03:02+0000\n"
+"Last-Translator: VfBFan <drop0815@posteo.de>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/openatv/enigma2-7-0-po/de/>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -2275,6 +2275,7 @@ msgid "Add AutoTimer"
 msgstr "AutoTimer hinzufügen"
 
 # MovieSelection.py
+#, fuzzy
 msgid "Add Bookmark"
 msgstr "Lesezeichen hinzufügen"
 
@@ -3667,7 +3668,7 @@ msgid "Button Setup"
 msgstr "Tastenbelegung"
 
 msgid "Button error timeout"
-msgstr "Timeout für Tastenfehler"
+msgstr "Timeout für Tastenfehlern"
 
 msgid "ButtonSetup"
 msgstr "Tastenbelegung"
@@ -5603,8 +5604,9 @@ msgstr "Schnitteditor"
 msgid "Cutlist editor..."
 msgstr "Schnitteditor..."
 
+#, fuzzy
 msgid "Cycle PiP(zap)"
-msgstr "zirkuliere Bild im Bild (Zap)"
+msgstr "Rotiere Bild im Bild (Zap)"
 
 msgid "Cycling"
 msgstr "Radfahren"
@@ -10981,8 +10983,9 @@ msgstr "Vorlauf vor Aufnahme"
 msgid "Mark service as dedicated 3D service"
 msgstr "Als 3D-Kanal markieren"
 
+#, fuzzy
 msgid "Mark/Portal/Playlist"
-msgstr "Markiere/Portal/Playlist"
+msgstr "Mark/Portal/Playlist"
 
 # UsageConfig.py:295
 msgid "Marker Actions"
@@ -17461,7 +17464,7 @@ msgstr "WLAN-Status anzeigen"
 
 # Menue Anpassungen OSD
 msgid "Show a spinning logo when the system is busy."
-msgstr "Zeige ein rotierendes Logo, wenn das System ausgelastet ist."
+msgstr "Bei 'Ja' wird der Spinner (Beschäftigungsanzeige) angezeigt, wenn die %s %s ausgelastet ist."
 
 msgid "Show additional slider value"
 msgstr "Zusätzlichen Schiebereglerwert anzeigen"
@@ -17471,7 +17474,7 @@ msgid "Show advanced settings"
 msgstr "Erweiterte Einstellungen anzeigen"
 
 msgid "Show animation while busy"
-msgstr "Zeige Animation, solange ausgelastet"
+msgstr "Animation anzeigen, solange beschäftigt"
 
 msgid "Show as Picture (press any key to close)"
 msgstr "Als Bild anzeigen (beliebige Taste, um die Anzeige zu schließen)"
@@ -17481,11 +17484,11 @@ msgid "Show as Picture and save as file ('%s')"
 msgstr "Als Bild anzeigen und in Datei '%s' speichern"
 
 msgid "Show background in Radio Mode"
-msgstr "Zeige im Radiomodus einen Hintergrund"
+msgstr "Im Radiomodus einen Hintergrund anzeigen"
 
 # Menue Anpassungen OSD
 msgid "Show background when tuned to a radio channel."
-msgstr "Zeige beim Abspielen eines Radiosenders einen Hintergrund."
+msgstr "Bei 'Ja' wird im Radiomodus ein Hintergrund angezeigt."
 
 msgid "Show bouquet on launch"
 msgstr "Bouquet beim Start anzeigen"
@@ -17527,19 +17530,19 @@ msgid "Show crash info on screen and write crash log for x times"
 msgstr "Wie oft Absturz-Info anzeigen und Crash-Log erstellen"
 
 msgid "Show crypto icons"
-msgstr "Zeige Verschlüsselungslogos"
+msgstr "Anzeige der Verschlüsselung"
 
 msgid "Show crypto info in InfoBar"
 msgstr "Verschlüsselungsdetails in der Infoleiste anzeigen"
 
 msgid "Show debug log information"
-msgstr "Debug-Log Informationen anzeigen"
+msgstr "Debug-Log-Informationen anzeigen"
 
 msgid "Show default after description"
-msgstr "Standardwerte nach Beschreibung anzeigen"
+msgstr "Standard nach Beschreibung anzeigen"
 
 msgid "Show default on new line"
-msgstr "Standardwerte in neuer Zeile anzeigen"
+msgstr "Standard in neuer Zeile anzeigen"
 
 msgid "Show detailed event info"
 msgstr "Detaillierte Sendungsinformationen anzeigen"
@@ -17558,7 +17561,7 @@ msgstr "Verzeichnisse am Anfang oder am Ende der Liste anzeigen (Neustart vom Fi
 
 # Menue Anpassungen OSD
 msgid "Show encryption information in the InfoBar (when supported by the skin)."
-msgstr "Die Anzeige der Verschlüsselungsdetails in der Infoleiste anzeigen (wenn es vom Skin unterstützt wird)."
+msgstr "Die Anzeige der Verschlüsselungsdetails in der Infoleiste einstellen (der Skin muss es unterstützen)."
 
 msgid "Show event details"
 msgstr "Sendungsdetails anzeigen"
@@ -17569,7 +17572,7 @@ msgstr "Genre-Informationen anzeigen"
 
 #
 msgid "Show event-progress in channel selection"
-msgstr "Sendungsfortschritt in der Kanalauswahl anzeigen"
+msgstr "Sendungsfortschritt anzeigen"
 
 msgid "Show eventinfo plugins"
 msgstr "Sendungsinformation-Plugins anzeigen"
@@ -17584,13 +17587,13 @@ msgid "Show extensions..."
 msgstr "Erweiterungen anzeigen..."
 
 msgid "Show extra spacing in Information"
-msgstr "Zusätzlichen Abstand in Informationen anzeigen"
+msgstr "Zusätzlichen Abstand in Informationen"
 
 msgid "Show favorites list"
 msgstr "Favoritenliste anzeigen"
 
 msgid "Show files backed up by default"
-msgstr "Zeige Dateien, die standardmäßig gesichert werden"
+msgstr "Zeigt Dateien, die grundsätzlich gesichert werden"
 
 msgid "Show graphical multi EPG"
 msgstr "Grafischen Multi-EPG anzeigen"
