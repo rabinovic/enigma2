@@ -19,7 +19,7 @@ SystemInfo = {}
 class BoxInformation:  # To maintain data integrity class variables should not be accessed from outside of this class!
 	def __init__(self):
 		self.immutableList = []
-		self.boxInfo = {}
+		self.boxInfo = {"model": "dummy"}
 		self.enigmaInfoList = []
 		self.enigmaConfList = []
 		lines = fileReadLines(pathjoin(resolveFilename(SCOPE_LIBDIR), "enigma.info"), source=MODULE_NAME)
@@ -162,12 +162,12 @@ BoxInfo = BoxInformation()
 ARCHITECTURE = BoxInfo.getItem("architecture")
 BRAND = BoxInfo.getItem("brand")
 MODEL = BoxInfo.getItem("model")
-SOC_FAMILY = BoxInfo.getItem("socfamily")
+# SOC_FAMILY = BoxInfo.getItem("socfamily")
 DISPLAYTYPE = BoxInfo.getItem("displaytype")
 MTDROOTFS = BoxInfo.getItem("mtdrootfs")
-DISPLAYMODEL = BoxInfo.getItem("displaymodel")
-DISPLAYBRAND = BoxInfo.getItem("displaybrand")
-MACHINEBUILD = BoxInfo.getItem("machinebuild")
+DISPLAYMODEL = 'XY'
+DISPLAYBRAND = 'YZ'
+MACHINEBUILD = "AB"
 
 
 def getBoxDisplayName():  # This function returns a tuple like ("BRANDNAME", "BOXNAME")
@@ -338,12 +338,12 @@ BoxInfo.setItem("12V_Output", Misc_Options.getInstance().detected_12V_output()) 
 BoxInfo.setItem("3DMode", fileCheck("/proc/stb/fb/3dmode") or fileCheck("/proc/stb/fb/primary/3d"))
 BoxInfo.setItem("3DZNorm", fileCheck("/proc/stb/fb/znorm") or fileCheck("/proc/stb/fb/primary/zoffset"))
 BoxInfo.setItem("7segment", DISPLAYTYPE in ("7segment",))
-BoxInfo.setItem("AmlogicFamily", SOC_FAMILY.startswith(("aml", "meson")) or exists("/proc/device-tree/amlogic-dt-id") or exists("/usr/bin/amlhalt") or exists("/sys/module/amports"))
-BoxInfo.setItem("ArchIsARM64", ARCHITECTURE == "aarch64" or "64" in ARCHITECTURE)
-BoxInfo.setItem("ArchIsARM", ARCHITECTURE.startswith(("arm", "cortex")))
+# BoxInfo.setItem("AmlogicFamily", SOC_FAMILY.startswith(("aml", "meson")) or exists("/proc/device-tree/amlogic-dt-id") or exists("/usr/bin/amlhalt") or exists("/sys/module/amports"))
+BoxInfo.setItem("ArchIsARM64", ARCHITECTURE == "aarch64")
+BoxInfo.setItem("ArchIsARM", "".startswith(("arm", "cortex")))
 BoxInfo.setItem("Blindscan", isPluginInstalled("Blindscan"))
 BoxInfo.setItem("BoxName", GetBoxName())
-canImageBackup = not MACHINEBUILD.startswith('az') and not BRAND.startswith('cube') and not BRAND.startswith('wetek') and not MACHINEBUILD.startswith('alien')
+canImageBackup = False
 BoxInfo.setItem("canImageBackup", canImageBackup)
 BoxInfo.setItem("CanMeasureFrontendInputPower", eDVBResourceManager.getInstance().canMeasureFrontendInputPower())
 BoxInfo.setItem("canMultiBoot", MultiBoot.getBootSlots())
@@ -376,7 +376,7 @@ BoxInfo.setItem("HAVEINITCAM", haveInitCam())
 BoxInfo.setItem("HaveTouchSensor", MACHINEBUILD in ("dm520", "dm525", "dm900", "dm920"))
 BoxInfo.setItem("HDMICEC", fileExists("/dev/hdmi_cec") or fileExists("/dev/misc/hdmi_cec0"))
 BoxInfo.setItem("HDMIin", MODEL in ("inihdp", "hd2400", "et10000", "dm7080", "dm820", "dm900", "dm920", "vuultimo4k", "et13000", "sf5008", "vuuno4kse", "vuduo4k", "vuduo4kse") or MACHINEBUILD in ("spycat4k", "spycat4kcombo", "gbquad4k"))
-BoxInfo.setItem("HiSilicon", SOC_FAMILY.startswith("hisi") or exists("/proc/hisi") or exists("/usr/bin/hihalt") or exists("/usr/lib/hisilicon"))
+# BoxInfo.setItem("HiSilicon", SOC_FAMILY.startswith("hisi") or exists("/proc/hisi") or exists("/usr/bin/hihalt") or exists("/usr/lib/hisilicon"))
 BoxInfo.setItem("LcdDisplay", fileExists("/dev/dbox/lcd0"))
 BoxInfo.setItem("LcdLiveTV", fileCheck("/proc/stb/fb/sd_detach") or fileCheck("/proc/stb/lcd/live_enable"))
 BoxInfo.setItem("LcdLiveTVPiP", fileCheck("/proc/stb/lcd/live_decoder"))
@@ -404,7 +404,7 @@ BoxInfo.setItem("Satfinder", isPluginInstalled("Satfinder"))
 BoxInfo.setItem("SmallFlash", BoxInfo.getItem("smallflash"))
 BoxInfo.setItem("SoftCam", Check_Softcam())
 BoxInfo.setItem("StandbyPowerLed", fileExists("/proc/stb/power/standbyled"))
-BoxInfo.setItem("STi", SOC_FAMILY.startswith("sti"))
+# BoxInfo.setItem("STi", SOC_FAMILY.startswith("sti"))
 BoxInfo.setItem("SuspendPowerLed", fileExists("/proc/stb/power/suspendled"))
 BoxInfo.setItem("USETunersetup", BoxInfo.getItem("ForceLNBPowerChanged") or BoxInfo.getItem("ForceToneBurstChanged"))
 BoxInfo.setItem("VFD_scroll_repeats", fileCheck("/proc/stb/lcd/scroll_repeats"))

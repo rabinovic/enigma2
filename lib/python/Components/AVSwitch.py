@@ -17,7 +17,7 @@ has_avjack = BoxInfo.getItem("avjack", False)
 has_scartyuv = BoxInfo.getItem("scartyuv", False)
 has_dvi = BoxInfo.getItem("dvi", False)
 BRAND = BoxInfo.getItem("brand")
-MACHINEBUILD = BoxInfo.getItem("machinebuild")
+MACHINEBUILD = "machinebuild"
 
 config.av = ConfigSubsection()
 if BRAND in ('azbox',):
@@ -97,24 +97,9 @@ class AVSwitch:
 	modes["Scart"] = ["PAL", "NTSC", "Multi"]
 	# modes["DVI-PC"] = ["PC"]
 
-	if (about.getChipSetString() in ('7366', '7376', '5272s', '7444', '7445', '7445s')):
-		modes["HDMI"] = ["720p", "1080p", "2160p", "1080i", "576p", "576i", "480p", "480i"]
-		widescreen_modes = {"720p", "1080p", "1080i", "2160p"}
-	elif (about.getChipSetString() in ('7252', '7251', '7251S', '7252S', '7251s', '7252s', '72604', '7278', '7444s', '3798mv200', '3798mv200h', '3798cv200', 'hi3798mv200', 'hi3798mv200h', 'hi3798cv200')):
-		modes["HDMI"] = ["720p", "1080p", "2160p", "2160p30", "1080i", "576p", "576i", "480p", "480i"]
-		widescreen_modes = {"720p", "1080p", "1080i", "2160p", "2160p30"}
-	elif (about.getChipSetString() in ('7241', '7358', '7362', '73625', '7346', '7356', '73565', '7424', '7425', '7435', '7552', '7581', '7584', '75845', '7585', 'pnx8493', '7162', '7111', '3716mv410', 'hi3716mv410', 'hi3716mv430', '3716mv430')) or (BRAND in ('azbox')):
-		modes["HDMI"] = ["720p", "1080p", "1080i", "576p", "576i", "480p", "480i"]
-		widescreen_modes = {"720p", "1080p", "1080i"}
-	elif about.getChipSetString() in ('meson-6',):
-		modes["HDMI"] = ["720p", "1080p", "1080i"]
-		widescreen_modes = {"720p", "1080p", "1080i"}
-	elif about.getChipSetString() in ('meson-64', 'S905D'):
-		modes["HDMI"] = ["720p", "1080p", "2160p", "2160p30", "1080i"]
-		widescreen_modes = {"720p", "1080p", "1080i", "2160p", "2160p30"}
-	else:
-		modes["HDMI"] = ["720p", "1080i", "576p", "576i", "480p", "480i"]
-		widescreen_modes = {"720p", "1080i"}
+
+	modes["HDMI"] = ["720p", "1080i", "576p", "576i", "480p", "480i"]
+	widescreen_modes = {"720p", "1080i"}
 
 	modes["YPbPr"] = modes["HDMI"]
 	if has_scartyuv:
